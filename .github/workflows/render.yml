@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: SMTChecker
-    env: php
-    plan: free
-    buildCommand: ""
-    startCommand: ""
-    repo: https://github.com/MasterZXD2/SMTChecker
-    branch: main
