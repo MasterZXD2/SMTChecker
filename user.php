@@ -35,6 +35,7 @@ $_SESSION['date'] = $_SESSION['user'][1];
             <label class="dataMessage">
                 <a> ชื่อ: <?= htmlspecialchars($_SESSION['name']) ?> ม.<?= htmlspecialchars($_SESSION['m']) ?> </a>
                 <a> เกิด: <?= htmlspecialchars($_SESSION['date']) ?> </a>
+                <input type="hidden" name="location" id="locationField">
                 <input type="submit" value="CHECKIN">
             </label>
         </div>
