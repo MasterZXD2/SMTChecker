@@ -1,3 +1,5 @@
+<?php session_start(); ?>
+
 <!DOCTYPE html>
 <html>
 
@@ -23,7 +25,6 @@
             </div>
 
             <?php
-            session_start();
             if(isset($_SESSION['error'])){
                 echo "<div class = 'errorMsg'>{$_SESSION['error']}</div>";
                 unset($_SESSION['error']);
