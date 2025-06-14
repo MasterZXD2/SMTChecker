@@ -2,6 +2,7 @@
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $id = $_SESSION['id'];
     $name = $_SESSION['name'];
     $m = $_SESSION['m'];
     $date = $_SESSION['date'];
@@ -9,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $coords = $_POST['location'] ?? '';
 
     $data = [
-        'idcard' => $idcard,
+        'id' => $id,
         'name' => $name,
         'level' => $level,
         'place' => $place,
