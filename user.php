@@ -7,6 +7,7 @@ if (!isset($_SESSION['user'])) {
     exit();
 }
 
+$_SESSION['id'] = $_SESSION['user'][0];
 $_SESSION['name'] = $_SESSION['user'][2];
 $_SESSION['m'] = $_SESSION['user'][3];
 $_SESSION['date'] = $_SESSION['user'][1];
