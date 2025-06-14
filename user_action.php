@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'coords' => $coords
     ];
 
-    $url = "https://script.google.com/macros/s/PASTE_YOUR_DEPLOY_URL/exec"; // <- เปลี่ยนตรงนี้
+    $url = "https://script.google.com/macros/s/AKfycbysvqb20wuG3mg1v4vUgS3YKB1f0hqR2Is1wUBo2Un8gShjy81Z5RN7vjPgiIK-ayfO/exec"; // <- เปลี่ยนตรงนี้
     $options = [
         'http' => [
             'header'  => "Content-type: application/json",
