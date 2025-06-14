@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'id' => $id,
         'name' => $name,
-        'level' => $level,
+        'level' => $m,
         'place' => $place,
         'coords' => $coords
     ];
