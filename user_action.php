@@ -6,25 +6,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m = $_SESSION['m'];
     $date = $_SESSION['date'];
     $place = $_POST['place'] ?? 'ไม่ทราบสถานที่';
-    $coords = $_POST['location'] ?? 'ไม่ทราบพิกัด';
+    $coords = $_POST['location'] ?? '';
 
-    //$location = $place . " (" . $coords . ")";
+    $data = [
+        'idcard' => $idcard,
+        'name' => $name,
+        'level' => $level,
+        'place' => $place,
+        'coords' => $coords
+    ];
 
-    $googleMapLink = $coords
-        ? "https://www.google.com/maps?q=" . urlencode($coords)
-        : '';
+    $url = "https://script.google.com/macros/s/PASTE_YOUR_DEPLOY_URL/exec"; // <- เปลี่ยนตรงนี้
+    $options = [
+        'http' => [
+            'header'  => "Content-type: application/json",
+            'method'  => 'POST',
+            'content' => json_encode($data),
+        ]
+    ];
 
-    // ตัวอย่าง: บันทึกลง log หรือเก็บใน database
-    //file_put_contents("checkin_log.txt", "ชื่อ: $name ม.$m เกิด: $date สถานที่: $location\n", FILE_APPEND);
+    $context  = stream_context_create($options);
+    $result = file_get_contents($url, false, $context);
 
-    echo "เช็คอินเรียบร้อย!<br>";
-    echo "ชื่อ: $name<br>ม.: $m<br>เกิด: $date<br>ตำแหน่ง: $place";
-
-     if ($googleMapLink) {
-        echo "ดูแผนที่: <a href='$googleMapLink' target='_blank'>$coords</a>";
-    } else {
-        echo "ไม่พบพิกัด";
-    }
-} else {
-    echo "Method ไม่ถูกต้อง";
+    echo "✅ เช็คอินสำเร็จ!<br><pre>";
+    echo htmlspecialchars($result);
+    echo "</pre>";
 }
