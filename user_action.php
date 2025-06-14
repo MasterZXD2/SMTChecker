@@ -29,7 +29,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $context  = stream_context_create($options);
     $result = file_get_contents($url, false, $context);
 
-    echo "✅ เช็คอินสำเร็จ!<br><pre>";
-    echo htmlspecialchars($result);
-    echo "</pre>";
+    header("location: checkIN.php");
 }
