@@ -89,3 +89,11 @@ img[alt="main"] {
     flex-direction: column;
     gap: 5px;
 }
+
+img[alt="check"] {
+  width: 120px;
+  height: 120px;
+  display: block;
+  margin: 50px auto;
+  object-fit: contain;
+}
