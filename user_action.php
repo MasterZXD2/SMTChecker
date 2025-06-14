@@ -5,7 +5,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_SESSION['name'];
     $m = $_SESSION['m'];
     $date = $_SESSION['date'];
-    $location =  $_POST['place'] + "(" + $_POST['location'] + ")" ?? 'ไม่พบตำแหน่ง';
+    $place = $_POST['place'] ?? 'ไม่ทราบสถานที่';
+    $coords = $_POST['location'] ?? 'ไม่ทราบพิกัด';
+
+    $location = $place . " (" . $coords . ")";
 
     // ตัวอย่าง: บันทึกลง log หรือเก็บใน database
     //file_put_contents("checkin_log.txt", "ชื่อ: $name ม.$m เกิด: $date สถานที่: $location\n", FILE_APPEND);
