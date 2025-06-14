@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'coords' => $coords
     ];
 
-    $url = "https://script.google.com/macros/s/AKfycbzSInzmtr7Rn00U7CXMo_GA3vxGilqAuYSQ457QUoyRq6M8X-YhEx-ac0QhQENjxL0l/exec"; // <- เปลี่ยนตรงนี้
+    $url = "https://script.google.com/macros/s/AKfycbzujJ_kuTpvks5RbjnbnZXnpOd0XdkfZLdQEwPJecIvtSEliLiGqtmWrjIUeVUHERIi/exec"; // <- เปลี่ยนตรงนี้
     $options = [
         'http' => [
             'header'  => "Content-type: application/json",
