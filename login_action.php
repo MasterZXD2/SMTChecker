@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-$url = "https://script.google.com/macros/s/AKfycbzBS8qxBAoHml3MXiUAlxOp1hraP3BZ_04fTkw-gGV2zJOU2QEIXAGzU76eMN3J26cP/exec";
+$url = "https://script.google.com/macros/s/AKfycbyEhbvOgCHRdVmMQVvvp_4iQ3AwuidPh-Lz0IQk03He4DE0gGZZz4fTjydwvEbLAAg/exec";
 $postData = [
     "action" => "login",
     "id" => $_POST['id'],
