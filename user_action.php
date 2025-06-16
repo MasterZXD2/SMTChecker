@@ -2,7 +2,7 @@
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = "'".$_SESSION['id'];
+    $timestamp = date("Y-m-d H:i:s");
     $name = $_SESSION['name'];
     $m = $_SESSION['m'];
     $date = $_SESSION['date'];
@@ -10,14 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $coords = $_POST['location'] ?? '';
 
     $data = [
-        'id' => $id,
+        'time' => $timestamp,
         'name' => $name,
         'level' => $m,
-        'place' => $place,
         'coords' => $coords
     ];
 
-    $url = "https://script.google.com/macros/s/AKfycbzujJ_kuTpvks5RbjnbnZXnpOd0XdkfZLdQEwPJecIvtSEliLiGqtmWrjIUeVUHERIi/exec"; // <- เปลี่ยนตรงนี้
+    $url = "https://script.google.com/macros/s/AKfycbxdHFeLHwZQyELGlEUX0MgneDpbBrDnv3lw0WtKs6sHzd4UnjbTFBttW-bep6q2V_2rvg/exec"; // <- เปลี่ยนตรงนี้
     $options = [
         'http' => [
             'header'  => "Content-type: application/json",
