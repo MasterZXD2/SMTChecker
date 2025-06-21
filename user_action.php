@@ -2,6 +2,7 @@
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    date_default_timezone_set('Asia/Bangkok');
     $timestamp = date("Y-m-d H:i:s");
     $name = $_SESSION['name'];
     $m = $_SESSION['m'];
