@@ -38,7 +38,7 @@ $_SESSION['date'] = $_SESSION['user'][1];
                 <a> เกิด: <?= htmlspecialchars($_SESSION['date']) ?> </a>
                 <input type="hidden" name="location" id="locationField">
                 <input type="hidden" id="placeField" name="place">
-                <input type="submit" value="CHECKIN">
+                <input type="submit" value="CHECKIN/CHECKOUT">
             </label>
         </div>
     </form>
