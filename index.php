@@ -4,7 +4,7 @@ session_start();
 $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
 
 if (strpos($userAgent, "line") === false) {
-    echo "กรุณาเปิดจากเว็บจากลิ้งที่อาจารส่งใน LINE เท่านั้น";
+    echo "กรุณาเปิดจากเว็บจากลิ้งที่อาจารส่งใน LINE และผ่านในโทรศัพท์เท่านั้น";
     exit;
 }
 
