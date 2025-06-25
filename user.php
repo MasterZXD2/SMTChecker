@@ -35,7 +35,7 @@ $_SESSION['date'] = $_SESSION['user'][1];
         <div class="dashboardContainer">
             <label class="dataMessage">
                 <a> ชื่อ: <?= htmlspecialchars($_SESSION['name']) ?> ม.<?= htmlspecialchars($_SESSION['m']) ?> </a>
-                <a> เกิด: <?= htmlspecialchars($_SESSION['date']) ?> </a>
+                <a> เลขบัตรนักเรียน: <?= htmlspecialchars($_SESSION['date']) ?> </a>
                 <input type="hidden" name="location" id="locationField">
                 <input type="hidden" id="placeField" name="place">
                 <input type="submit" value="CHECKIN/CHECKOUT">
