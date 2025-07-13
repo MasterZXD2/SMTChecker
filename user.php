@@ -44,7 +44,11 @@ $_SESSION['date'] = $_SESSION['user'][1];
     </form>
 
     <script>
+        let hasClicked = false;
+
         function sendLocation(form) {
+            if (hasClicked) return false;
+            hasClicked = true;
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     const lat = position.coords.latitude;
@@ -64,9 +68,11 @@ $_SESSION['date'] = $_SESSION['user'][1];
                         })
                         .catch(error => {
                             alert("เกิดข้อผิดพลาดในการแปลงพิกัดเป็นชื่อสถานที่: " + error);
+                            hasClicked = false;
                         });
                 }, function(error) {
                     alert("ไม่สามารถดึงตำแหน่งได้: " + error.message);
+                    hasClicked = false;
                 });
 
                 return false; // รอ fetch ก่อนจึงค่อย submit
