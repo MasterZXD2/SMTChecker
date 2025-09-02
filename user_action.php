@@ -7,8 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_SESSION['name'];
     $m = $_SESSION['m'];
     $date = $_SESSION['date'];
-    $place = $_POST['place'] ?? 'ไม่ทราบสถานที่';
-    $coords = $_POST['location'] ?? '';
+    $place = $_SESSION['place'];
+    $coords = $_SESSION['location'];
 
     $data = [
         'time' => $timestamp,

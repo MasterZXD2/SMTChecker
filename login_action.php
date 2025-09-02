@@ -21,6 +21,8 @@ $result = json_decode($result, 1);
 
 if ($result['status'] == "success") {
     $_SESSION['user'] = $result['data'];
+    $_SESSION['place'] = $_POST['place'] ?? 'ไม่ทราบสถานที่';
+    $_SESSION['location'] = $_POST['location'] ?? '';
     header("location: user.php");
 } else {
     $_SESSION['error'] = $result['message'];
