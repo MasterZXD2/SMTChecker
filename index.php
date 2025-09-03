@@ -17,14 +17,25 @@ if (strpos($userAgent, "line") !== false) {
 
     $link = "https://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'];
 
+    // Android
     if (strpos($userAgent, "android") !== false) {
-        // Android → ใช้ Intent URL
         $intent = "intent://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'] . "#Intent;scheme=https;package=com.android.chrome;end";
-        header("Location: $intent");
+        echo "<html><head><meta charset='utf-8'></head><body>";
+        echo "<p>กำลังพยายามเปิดใน Chrome...</p>";
+        echo "<script>
+                setTimeout(function(){
+                    window.location.href = '$intent';
+                }, 500);
+              </script>";
+        echo "<p>ถ้าไม่เด้ง <a href='$link' target='_blank'>คลิกที่นี่เพื่อเปิด</a></p>";
+        echo "</body></html>";
         exit();
     } else {
-        // iOS → Safari
-        echo "<script>window.location.replace('$link');</script>";
+        // iOS → ต้องให้กดเอง
+        echo "<html><head><meta charset='utf-8'></head><body>";
+        echo "<h3>กรุณาเปิดด้วย Safari</h3>";
+        echo "<a href='$link'>🍏 กดที่นี่เพื่อเปิดใน Safari</a>";
+        echo "</body></html>";
         exit();
         }
 }
