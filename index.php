@@ -17,18 +17,16 @@ if (strpos($userAgent, "line") !== false) {
 
     $link = "https://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'];
 
-    echo "<html><head><meta charset='utf-8'><title>เลือกเปิดเว็บ</title></head><body>";
-    echo "<h3>กรุณาเลือกเปิดเว็บจากเบราว์เซอร์</h3>";
-    echo "<p><a href='$link'>🌐 เปิดในเบราว์เซอร์ปกติ</a></p>";
-
-    // Android Chrome (Intent)
-    echo "<p><a href='intent://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'] . "#Intent;scheme=https;package=com.android.chrome;end'>📱 เปิดด้วย Chrome (Android)</a></p>";
-
-    // iOS Safari (ใช้ URL ธรรมดา)
-    echo "<p><a href='$link'>🍏 เปิดด้วย Safari (iOS)</a></p>";
-
-    echo "</body></html>";
-    exit();
+    if (strpos($userAgent, "android") !== false) {
+        // Android → ใช้ Intent URL
+        $intent = "intent://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'] . "#Intent;scheme=https;package=com.android.chrome;end";
+        header("Location: $intent");
+        exit();
+    } else {
+        // iOS → Safari
+        echo "<script>window.location.replace('$link');</script>";
+        exit();
+        }
 }
 
 // ถ้าเข้าจาก browser ปกติพร้อม token
