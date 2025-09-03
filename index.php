@@ -10,13 +10,13 @@ function generateToken($length = 32) {
 }
 
 // กรณีเข้าจาก LINE
-if (strpos($userAgent, "line") !== false) {
+if (strpos($userAgent, "line")) {
     if (!isset($_SESSION['access_token'])) {
         $_SESSION['access_token'] = generateToken();
     }
 
     // redirect ไปยังลิงก์ที่มี token อัตโนมัติ
-    $link = "https://yourdomain.com/index.php?token=" . $_SESSION['access_token'];
+    $link = "https://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'];
     header("Location: $link");
     exit;
 }
