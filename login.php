@@ -51,7 +51,7 @@ if (strpos($userAgent, "line") === false) {
             <input type="hidden" id="locationField" name="location">
             <input type="hidden" id="placeField" name="place">
 
-            <input id="shareBtn" type = "submit" value = "LOGIN">
+            <button id="shareBtn" type="button">LOGIN</button>
         
             <div id="status" style="margin-top:10px;color:#444;"></div>
         </form>
