@@ -33,9 +33,18 @@ if (strpos($userAgent, "line") !== false) {
     } else {
         // iOS → ต้องให้กดเอง
         echo "<html><head><meta charset='utf-8'></head><body>";
-        echo "<h3>กรุณาเปิดด้วย Safari</h3>";
-        echo "<a href='$link'>🍏 กดที่นี่เพื่อเปิดใน Safari</a>";
-        echo "</body></html>";
+echo "<h3>🍏 กรุณาเปิดด้วย Safari</h3>";
+echo "<p><a href='$link' target='_blank' rel='noopener noreferrer' style='
+        display:inline-block;
+        padding:15px 25px;
+        background:#007aff;
+        color:#fff;
+        border-radius:8px;
+        text-decoration:none;
+        font-size:18px;
+    '>กดที่นี่เพื่อเปิดใน Safari</a></p>";
+echo "<p>หรือกดเมนูมุมขวาบน → เลือก <b>เปิดใน Safari</b></p>";
+echo "</body></html>";
         exit();
         }
 }
