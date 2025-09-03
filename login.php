@@ -150,7 +150,7 @@ if (strpos($userAgent, "line") === false) {
     // คำแนะนำเพิ่มเติม (แสดงเมื่อเปิดใน LINE แต่ไม่อนุญาต)
     // ถ้าต้องการฟีเจอร์เฉพาะของ LINE (เช่นแสดงหน้าจอ Permission ของ LIFF) ให้ดู LIFF docs
 })();
-</script
+</script>
 </body>
 
 </html>
