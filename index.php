@@ -20,10 +20,7 @@ if (strpos($userAgent, "line") !== false) {
     // สร้างหน้า HTML ที่จะบังคับเปิด browser ปกติ
     echo "<html><head><meta charset='utf-8'></head><body>";
     echo "<p>กำลังเปิดในเบราว์เซอร์ปกติ...</p>";
-    echo "<script>
-        // วิธี 1: ใช้ window.open เพื่อพยายามเปิด browser จริง
-        window.location.href = '$link';
-    </script>";
+    echo "<script>window.location.href = '$link';</script>";
     echo "</body></html>";
     exit;
 }
