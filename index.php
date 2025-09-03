@@ -2,7 +2,7 @@
 session_start();
 
 $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
-$token = isset($_GET['token']) ? $_GET['token'] : null;
+$token = isset($_GET['token']);// ? $_GET['token'] : null;
 
 // ฟังก์ชันสร้าง token
 function generateToken($length = 32) {
