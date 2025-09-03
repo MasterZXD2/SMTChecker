@@ -22,7 +22,7 @@ if (strpos($userAgent, "line") !== false) {
     echo "<p>กำลังเปิดในเบราว์เซอร์ปกติ...</p>";
     echo "<script>window.location.href = '$link';</script>";
     echo "</body></html>";
-    exit;
+    exit();
 }
 
 // ถ้าเข้าจาก browser ปกติพร้อม token
@@ -33,13 +33,13 @@ if ($token) {
         } else {
             header("Location: user.php");
         }
-        exit;
+        exit();
     } else {
         echo "❌ Token ไม่ถูกต้อง หรือหมดอายุ";
-        exit;
+        exit();
     }
 }
 
 echo "กรุณาเปิดจาก LINE ก่อน"
-exit;
+exit();
 ?>
