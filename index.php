@@ -52,6 +52,7 @@ echo "</body></html>";
 // ถ้าเข้าจาก browser ปกติพร้อม token
 if ($token) {
     if (true){//isset($_SESSION['access_token']) && $token === $_SESSION['access_token']) {
+        $_SESSION['token'] = $token;
         if (!isset($_SESSION["user"])) {
             header("Location: login.php");
         } else {
