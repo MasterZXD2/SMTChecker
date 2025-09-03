@@ -4,8 +4,13 @@ session_start();
 $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
 
 if (strpos($userAgent, "line") === false) {
-    echo "กรุณาเปิดจากเว็บจากลิ้งที่อาจารส่งใน LINE และผ่านในโทรศัพท์เท่านั้น";
-    exit;
+    //echo "กรุณาเปิดจากเว็บจากลิ้งที่อาจารส่งใน LINE และผ่านในโทรศัพท์เท่านั้น";
+    //exit;
+}
+
+if (!$token) {
+    echo "❌ Token ไม่ถูกต้อง หรือหมดอายุ";
+    exit();
 }
 
 ?>
