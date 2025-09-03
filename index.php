@@ -4,24 +4,31 @@ session_start();
 $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
 $token = isset($_GET['token']) ? $_GET['token'] : null;
 
-// ฟังก์ชันสร้าง token แบบสุ่ม
+// ฟังก์ชันสร้าง token
 function generateToken($length = 32) {
     return bin2hex(random_bytes($length / 2));
 }
 
-// กรณีเข้าจาก LINE
-if (strpos($userAgent, "line")) {
+// ถ้าเข้าจาก LINE
+if (strpos($userAgent, "line") !== false) {
     if (!isset($_SESSION['access_token'])) {
         $_SESSION['access_token'] = generateToken();
     }
 
-    // redirect ไปยังลิงก์ที่มี token อัตโนมัติ
     $link = "https://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'];
-    header("Location: $link");
+
+    // สร้างหน้า HTML ที่จะบังคับเปิด browser ปกติ
+    echo "<html><head><meta charset='utf-8'></head><body>";
+    echo "<p>กำลังเปิดในเบราว์เซอร์ปกติ...</p>";
+    echo "<script>
+        // วิธี 1: ใช้ window.open เพื่อพยายามเปิด browser จริง
+        window.location.href = '$link';
+    </script>";
+    echo "</body></html>";
     exit;
 }
 
-// กรณีเข้าจาก browser ปกติพร้อม token
+// ถ้าเข้าจาก browser ปกติพร้อม token
 if ($token) {
     if (isset($_SESSION['access_token']) && $token === $_SESSION['access_token']) {
         if (!isset($_SESSION["user"])) {
@@ -37,6 +44,5 @@ if ($token) {
     }
 }
 
-// ถ้าไม่ใช่ LINE และไม่มี token
-echo "กรุณาเปิดจากลิ้งใน LINE ก่อนเพื่อสร้าง token";
+echo "กรุณาเปิดจาก LINE ก่อน"
 exit;
