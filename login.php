@@ -8,7 +8,7 @@ if (strpos($userAgent, "line") === false) {
     //exit;
 }
 
-if (!$token) {
+if (!$_SESSION['token']) {
     echo "❌ Token ไม่ถูกต้อง หรือหมดอายุ";
     exit();
 }
