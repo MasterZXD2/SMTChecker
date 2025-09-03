@@ -17,10 +17,16 @@ if (strpos($userAgent, "line") !== false) {
 
     $link = "https://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'];
 
-    // สร้างหน้า HTML ที่จะบังคับเปิด browser ปกติ
-    echo "<html><head><meta charset='utf-8'></head><body>";
-    echo "<p>กำลังเปิดในเบราว์เซอร์ปกติ...</p>";
-    echo "<script>window.location.href = '$link';</script>";
+    echo "<html><head><meta charset='utf-8'><title>เลือกเปิดเว็บ</title></head><body>";
+    echo "<h3>กรุณาเลือกเปิดเว็บจากเบราว์เซอร์</h3>";
+    echo "<p><a href='$link'>🌐 เปิดในเบราว์เซอร์ปกติ</a></p>";
+
+    // Android Chrome (Intent)
+    echo "<p><a href='intent://smtchecker.onrender.com/index.php?token=" . $_SESSION['access_token'] . "#Intent;scheme=https;package=com.android.chrome;end'>📱 เปิดด้วย Chrome (Android)</a></p>";
+
+    // iOS Safari (ใช้ URL ธรรมดา)
+    echo "<p><a href='$link'>🍏 เปิดด้วย Safari (iOS)</a></p>";
+
     echo "</body></html>";
     exit();
 }
