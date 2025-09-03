@@ -23,6 +23,8 @@ if (strpos($userAgent, "line") === false) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@500&display=swap" rel="stylesheet">
+    
+    <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
 </head>
 
 <body>
@@ -49,74 +51,106 @@ if (strpos($userAgent, "line") === false) {
             <input type="hidden" id="locationField" name="location">
             <input type="hidden" id="placeField" name="place">
 
-            <input type = "submit" value = "LOGIN">
+            <input id="shareBtn" type = "submit" value = "LOGIN">
+        
+            <div id="status" style="margin-top:10px;color:#444;"></div>
         </form>
     </div>
 
     <script>
-        let gpsReady = false;
-        let gpsError = null;
+(async () => {
+    const LIFF_ID = 'YOUR_LIFF_ID'; // <-- ใส่ LIFF ID ถ้ามี (ไม่ใส่ก็ใช้ navigator.geolocation ตามปกติ)
+    let liffInited = false;
 
-        // ฟังก์ชันขอพิกัดตอนโหลดเว็บ
-        window.onload = function () {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 0
-                });
-            } else {
-                gpsError = "เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง";
-            }
-        };
-
-        function successCallback(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`)
-                .then(response => response.json())
-                .then(data => {
-                    const locationName = data.display_name || "ไม่ทราบชื่อสถานที่";
-
-                    document.getElementById("locationField").value = lat + "," + lon;
-                    document.getElementById("placeField").value = locationName;
-
-                    gpsReady = true;
-                })
-                .catch(error => {
-                    gpsError = "เกิดข้อผิดพลาดจากการแปลงพิกัดเป็นสถานที่: " + error;
-                });
+    // พยายาม init LIFF เงียบๆ เพื่อให้ใช้ API ของ LIFF ได้ (ถ้ามีและคุณตั้งค่าแล้ว)
+    try {
+        if (window.liff) {
+            await liff.init({ liffId: LIFF_ID });
+            liffInited = true;
+            console.log('LIFF inited');
         }
+    } catch (e) {
+        console.warn('LIFF init failed or LIFF_ID not set', e);
+    }
 
-        function errorCallback(error) {
-            let message;
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    message = "ผู้ใช้ปฏิเสธการเข้าถึงตำแหน่ง \nวิธีแก้ลอง:\nตรวจสอบว่าผู้ใช้กด Allow Location ตอนที่เบราว์เซอร์ถามหรือไม่\niPhone: ไปที่ Settings > LINE > Location แล้วเลือก While Using the App\nAndroid: ไปที่ Settings > Apps > LINE > Permissions > Location แล้วกด Allow";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message = "ไม่สามารถระบุตำแหน่งได้ (สัญญาณ GPS หรือเครือข่ายไม่พร้อม)\nวิธีแก้ลอง:\nเปิด Location (GPS) Mode และตรวจสอบว่าเครื่องมีสัญญาณอินเทอร์เน็ตหรือไม่\nตรวจสอบว่าเครื่องมีสัญญาณอินเทอร์เน็ตหรือไม่ (บางครั้งต้องใช้ Network ช่วย)\nถ้าใช้ในอาคาร ลองย้ายออกไปที่โล่งแจ้ง";
-                    break;
-                case error.TIMEOUT:
-                    message = "หมดเวลาในการขอตำแหน่ง (Timeout)\nวิธีแก้ลอง:\nเปิด GPS + อินเทอร์เน็ตพร้อมกัน";
-                    break;
-                default:
-                    message = "ไม่ทราบข้อผิดพลาด\nลองตรวจสอบว่าเว็บทำงานผ่าน HTTPS ไหม\nวิธีแก้ลอง:\nตรวจสอบว่า code ไม่โดนบล็อกโดย AdBlock / Security App";
-                    break;
-            }
-            gpsError = `${message} (รายละเอียด: ${error.message}\n(ErrorCode: ${error.code})`;
-        }
+    const statusEl = document.getElementById('status');
+    const shareBtn = document.getElementById('shareBtn');
+    const form = document.getElementById('mainForm');
 
-        // ฟังก์ชันที่ทำงานก่อนส่งฟอร์ม
-        function attachLocation() {
-            if (!gpsReady) {
-                alert("❌ ไม่สามารถส่งฟอร์มได้ เพราะยังไม่ได้รับตำแหน่ง\n" + (gpsError || "กรุณาลองใหม่อีกครั้ง"));
-                return false;
+    // helper: Promise wrapper ของ getCurrentPosition
+    function getCurrentPositionPromise(options = {}) {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('เบราว์เซอร์ไม่รองรับ Geolocation'));
+                return;
             }
-            return true;
+            navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+    }
+
+    // ฟังก์ชัน reverse geocode (ใช้ Nominatim เป็นตัวอย่าง — ปรับเป็น service ของคุณถ้าต้องการ)
+    async function reverseGeocode(lat, lon) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.display_name || null;
+        } catch (e) {
+            return null;
         }
-    </script>
+    }
+
+    // ฟังก์ชันหลัก: ขอพิกัดแล้ว submit form
+    async function requestAndSubmit() {
+        statusEl.textContent = 'กำลังขอตำแหน่ง... กรุณาอนุญาตเมื่อมี popup ปรากฏ';
+        shareBtn.disabled = true;
+
+        try {
+            // บาง platform ต้องให้ผู้ใช้กดก่อนจึงเรียก geolocation (เราเรียกจากปุ่มแล้ว)
+            const pos = await getCurrentPositionPromise({
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            });
+
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+
+            // reverse geocode (ไม่จำเป็น แต่คุณใช้จากเดิม)
+            const place = await reverseGeocode(lat, lon) || 'ไม่ทราบชื่อสถานที่';
+
+            document.getElementById('locationField').value = `${lat},${lon}`;
+            document.getElementById('placeField').value = place;
+
+            statusEl.textContent = 'ได้รับตำแหน่งแล้ว กำลังส่งข้อมูล...';
+            form.submit();
+        } catch (err) {
+            console.error(err);
+            let msg = 'ไม่สามารถรับตำแหน่งได้: ' + (err.message || err);
+            // ถ้า user ปฏิเสธ permission ให้บอกวิธีแก้ปัญหาแบบสั้น ๆ
+            if (err.code === 1 || /permission/i.test(err.message)) {
+                msg += '\nผู้ใช้ปฏิเสธการเข้าถึงตำแหน่ง — ให้ลองเปิด Location ในการตั้งค่า LINE/เบราว์เซอร์:\n' +
+                       'iPhone: Settings > LINE > Location (หรือ Settings > Privacy & Security > Location Services > LINE)\n' +
+                       'Android: Settings > Apps > LINE > Permissions > Location';
+            } else if (err.code === 2) {
+                msg += '\nตำแหน่งไม่พร้อม (ลองออกไปที่โล่งแจ้ง หรือเปิด GPS และเชื่อมต่ออินเทอร์เน็ต)';
+            } else if (err.code === 3) {
+                msg += '\nหมดเวลา (timeout) — ลองกดแชร์อีกครั้งพร้อมเปิด GPS และสัญญาณเน็ต';
+            }
+            statusEl.textContent = msg;
+            shareBtn.disabled = false;
+        }
+    }
+
+    shareBtn.addEventListener('click', async (e) => {
+        // เรียกจากผู้ใช้กด -> ปลอดภัยตามแนวทางของ iOS/Android/LIFF
+        await requestAndSubmit();
+    });
+
+    // คำแนะนำเพิ่มเติม (แสดงเมื่อเปิดใน LINE แต่ไม่อนุญาต)
+    // ถ้าต้องการฟีเจอร์เฉพาะของ LINE (เช่นแสดงหน้าจอ Permission ของ LIFF) ให้ดู LIFF docs
+})();
+</script
 </body>
 
 </html>
