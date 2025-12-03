@@ -12,9 +12,21 @@ function generateToken($length = 32) {
 
 // ถ้าเข้าจาก LINE
 if ($isLineBrowser) {
-    // สร้าง token ถ้ายังไม่มี
-    if (!isset($_SESSION['access_token'])) {
+    // สร้าง token ถ้ายังไม่มี หรือ token หมดอายุ (1 ชั่วโมง)
+    $tokenExpiry = 3600; // 1 hour in seconds
+    $shouldGenerateNewToken = true;
+    
+    if (isset($_SESSION['access_token']) && isset($_SESSION['token_created_at'])) {
+        $tokenAge = time() - $_SESSION['token_created_at'];
+        if ($tokenAge < $tokenExpiry) {
+            // Token ยังไม่หมดอายุ
+            $shouldGenerateNewToken = false;
+        }
+    }
+    
+    if ($shouldGenerateNewToken) {
         $_SESSION['access_token'] = generateToken();
+        $_SESSION['token_created_at'] = time();
     }
     
     $token = $_SESSION['access_token'];
@@ -107,20 +119,34 @@ if ($isLineBrowser) {
                     // ลองเปิดด้วย Intent
                     setTimeout(function() {
                         window.location.href = intentUrl;
-                    }, 300);
+                    }, 500);
                     
-                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback
+                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback หลังจาก 2.5 วินาที
                     setTimeout(function() {
                         document.getElementById('fallback').style.display = 'block';
-                    }, 2000);
+                        document.getElementById('autoRedirect').style.display = 'none';
+                    }, 2500);
                 </script>
-                <div id="fallback" style="display: none;">
-                    <p class="info">ถ้าไม่เปิดอัตโนมัติ กรุณากดปุ่มด้านล่าง:</p>
-                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดใน Chrome</a>
-                    <p class="info" style="font-size: 14px; margin-top: 15px;">
-                        หรือ:<br>
-                        กดจุดสามจุด (⋮) มุมขวาบน → เลือก "เปิดในเบราว์เซอร์"
+                <div id="autoRedirect">
+                    <p class="info" style="color: #00C300; font-weight: bold;">
+                        ⏳ กำลังเปิดใน Chrome อัตโนมัติ...
                     </p>
+                </div>
+                <div id="fallback" style="display: none;">
+                    <p class="info" style="color: #d32f2f; font-weight: bold; margin-bottom: 20px;">
+                        ⚠️ ไม่สามารถเปิดอัตโนมัติได้
+                    </p>
+                    <p class="info">กรุณาทำตามขั้นตอนด้านล่าง:</p>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                        <p style="margin: 10px 0; font-weight: bold;">วิธีที่ 1: ใช้ปุ่มด้านล่าง</p>
+                        <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" style="display: block; text-align: center;">เปิดใน Chrome</a>
+                        <p style="margin: 20px 0 10px 0; font-weight: bold;">วิธีที่ 2: ใช้เมนู LINE</p>
+                        <ol style="margin: 0; padding-left: 20px; color: #666;">
+                            <li>กดจุดสามจุด (⋮) มุมขวาบนของหน้าจอ</li>
+                            <li>เลือก "<strong>เปิดในเบราว์เซอร์</strong>" หรือ "<strong>Open in Browser</strong>"</li>
+                            <li>เลือก Chrome</li>
+                        </ol>
+                    </div>
                 </div>
                 
             <?php elseif ($isIOS): ?>
@@ -134,21 +160,36 @@ if ($isLineBrowser) {
                     
                     if (!opened || opened.closed || typeof opened.closed == 'undefined') {
                         // ถ้า popup ถูกบล็อก ให้แสดงปุ่ม
-                        document.getElementById('fallback').style.display = 'block';
-                    } else {
-                        // ถ้าเปิดสำเร็จ ให้ปิดหน้าปัจจุบันหลังจาก 1 วินาที
                         setTimeout(function() {
-                            document.body.innerHTML = '<div class="container"><h2>✅ เปิดใน Safari แล้ว</h2><p>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p></div>';
+                            document.getElementById('fallback').style.display = 'block';
+                            document.getElementById('autoRedirect').style.display = 'none';
+                        }, 1500);
+                    } else {
+                        // ถ้าเปิดสำเร็จ ให้แสดงข้อความ
+                        setTimeout(function() {
+                            document.getElementById('autoRedirect').innerHTML = '<h2 style="color: #00C300;">✅ เปิดใน Safari แล้ว</h2><p class="info">กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p>';
                         }, 1000);
                     }
                 </script>
-                <div id="fallback" style="display: none;">
-                    <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
-                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer">เปิดใน Safari</a>
-                    <p class="info" style="font-size: 14px; margin-top: 15px;">
-                        หรือ:<br>
-                        กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
+                <div id="autoRedirect">
+                    <p class="info" style="color: #007aff; font-weight: bold;">
+                        ⏳ กำลังเปิดใน Safari อัตโนมัติ...
                     </p>
+                </div>
+                <div id="fallback" style="display: none;">
+                    <p class="info" style="color: #d32f2f; font-weight: bold; margin-bottom: 20px;">
+                        ⚠️ ไม่สามารถเปิดอัตโนมัติได้
+                    </p>
+                    <p class="info">กรุณาทำตามขั้นตอนด้านล่าง:</p>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                        <p style="margin: 10px 0; font-weight: bold;">วิธีที่ 1: ใช้ปุ่มด้านล่าง</p>
+                        <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer" style="display: block; text-align: center;">เปิดใน Safari</a>
+                        <p style="margin: 20px 0 10px 0; font-weight: bold;">วิธีที่ 2: ใช้เมนู LINE</p>
+                        <ol style="margin: 0; padding-left: 20px; color: #666;">
+                            <li>กดไอคอน Share (□↑) มุมขวาบนของหน้าจอ</li>
+                            <li>เลือก "<strong>Safari</strong>" หรือ "<strong>เปิดในเบราว์เซอร์</strong>"</li>
+                        </ol>
+                    </div>
                 </div>
                 
             <?php else: ?>
@@ -164,13 +205,76 @@ if ($isLineBrowser) {
 
 // ถ้าเข้าจาก browser ปกติพร้อม token
 if ($token) {
-    // ตรวจสอบ token จาก URL
-    $_SESSION['token'] = $token;
+    // ตรวจสอบว่า token ถูกต้องและยังไม่หมดอายุ
+    $tokenValid = false;
+    $tokenExpiry = 3600; // 1 hour
     
-    // เก็บ token ใน session เพื่อใช้ในหน้าอื่น
-    if (!isset($_SESSION['access_token'])) {
-        $_SESSION['access_token'] = $token;
+    // ตรวจสอบ token จาก session
+    if (isset($_SESSION['access_token']) && $_SESSION['access_token'] === $token) {
+        // ตรวจสอบอายุ token
+        if (isset($_SESSION['token_created_at'])) {
+            $tokenAge = time() - $_SESSION['token_created_at'];
+            if ($tokenAge < $tokenExpiry) {
+                $tokenValid = true;
+            }
+        } else {
+            // ถ้าไม่มี timestamp ให้ถือว่าเป็น token เก่า (backward compatibility)
+            // แต่จะสร้าง timestamp ใหม่
+            $_SESSION['token_created_at'] = time();
+            $tokenValid = true;
+        }
     }
+    
+    if (!$tokenValid) {
+        // Token ไม่ถูกต้องหรือหมดอายุ
+        session_destroy();
+        ?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Token Expired</title>
+            <style>
+                body {
+                    font-family: 'Noto Sans Thai', sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    text-align: center;
+                }
+                .container {
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    max-width: 500px;
+                }
+                h2 { color: #d32f2f; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; margin: 10px 0; }
+                .icon { font-size: 64px; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="icon">⏰</div>
+                <h2>❌ Token หมดอายุ</h2>
+                <p>Token สำหรับเข้าถึงเว็บไซต์หมดอายุแล้ว</p>
+                <p><strong>กรุณาเปิดเว็บไซต์ผ่านลิงก์จาก LINE อีกครั้ง</strong></p>
+            </div>
+        </body>
+        </html>
+        <?php
+        exit();
+    }
+    
+    // Token ถูกต้อง - ตั้งค่า session
+    $_SESSION['token'] = $token;
     
     // เก็บ token ใน cookie เพื่อเป็น backup (expires in 1 hour)
     setcookie('smtc_token', $token, time() + 3600, '/', '', true, true);
@@ -184,25 +288,76 @@ if ($token) {
     exit();
 }
 
-// ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback)
+// ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback - only if token was set within last hour)
 if (isset($_COOKIE['smtc_token']) && !isset($_SESSION['token'])) {
-    $_SESSION['token'] = $_COOKIE['smtc_token'];
-    if (!isset($_SESSION['access_token'])) {
-        $_SESSION['access_token'] = $_COOKIE['smtc_token'];
+    // Validate that cookie token matches a valid session token and hasn't expired
+    if (isset($_SESSION['access_token']) && $_COOKIE['smtc_token'] === $_SESSION['access_token']) {
+        // ตรวจสอบอายุ token
+        $tokenExpiry = 3600;
+        if (isset($_SESSION['token_created_at'])) {
+            $tokenAge = time() - $_SESSION['token_created_at'];
+            if ($tokenAge < $tokenExpiry) {
+                $_SESSION['token'] = $_COOKIE['smtc_token'];
+                // Redirect ไปยังหน้าถัดไป
+                if (!isset($_SESSION["user"])) {
+                    header("Location: login.php");
+                } else {
+                    header("Location: user.php");
+                }
+                exit();
+            }
+        }
     }
-    // Redirect ไปยังหน้าถัดไป
-    if (!isset($_SESSION["user"])) {
-        header("Location: login.php");
-    } else {
-        header("Location: user.php");
-    }
-    exit();
 }
 
-// ถ้าไม่มี token และไม่ใช่ LINE browser
-echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Error</title></head><body>";
-echo "<h2>❌ กรุณาเปิดจาก LINE ก่อน</h2>";
-echo "<p>เว็บไซต์นี้ต้องเปิดผ่านลิงก์จาก LINE เพื่อความปลอดภัย</p>";
-echo "</body></html>";
-exit();
+// ถ้าไม่มี token และไม่ใช่ LINE browser - STRICT: Only allow access from LINE
+if (!$token && !$isLineBrowser) {
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Access Denied</title>
+        <style>
+            body {
+                font-family: 'Noto Sans Thai', sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+                padding: 20px;
+                background: #f5f5f5;
+                text-align: center;
+            }
+            .container {
+                background: white;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                max-width: 500px;
+            }
+            h2 { color: #d32f2f; margin-bottom: 20px; }
+            p { color: #666; line-height: 1.6; margin: 10px 0; }
+            .icon { font-size: 64px; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="icon">🚫</div>
+            <h2>❌ ไม่สามารถเข้าถึงได้</h2>
+            <p><strong>เว็บไซต์นี้สามารถเข้าถึงได้ผ่าน LINE เท่านั้น</strong></p>
+            <p>กรุณาเปิดเว็บไซต์ผ่านลิงก์ที่ส่งใน LINE</p>
+            <p style="margin-top: 30px; font-size: 14px; color: #999;">
+                หากคุณกำลังใช้ LINE อยู่แล้ว<br>
+                กรุณารีเฟรชหน้าเว็บหรือเปิดลิงก์ใหม่อีกครั้ง
+            </p>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
+}
 ?>

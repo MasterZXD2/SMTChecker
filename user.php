@@ -2,6 +2,13 @@
 
 session_start();
 
+// STRICT: Require token to ensure access came through LINE
+if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
+    // Token missing - redirect to login which will check token
+    header("Location: login.php");
+    exit();
+}
+
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit();
