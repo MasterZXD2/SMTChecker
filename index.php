@@ -84,6 +84,37 @@ if ($isLineBrowser) {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
+            .slow-load-warning {
+                display: none;
+                background: #fff3cd;
+                border: 2px solid #ffc107;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+                color: #856404;
+                text-align: left;
+            }
+            .slow-load-warning.show {
+                display: block;
+                animation: fadeIn 0.3s ease-in;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .slow-load-warning strong {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 18px;
+            }
+            .slow-load-warning ol {
+                margin: 10px 0;
+                padding-left: 20px;
+            }
+            .slow-load-warning li {
+                margin: 8px 0;
+                line-height: 1.6;
+            }
         </style>
     </head>
     <body>
@@ -95,17 +126,41 @@ if ($isLineBrowser) {
                 <p>กรุณาเปิดเว็บไซต์ในเบราว์เซอร์ภายนอก (Chrome/Safari)</p>
             </div>
             
+            <!-- Slow loading detection for LINE browser -->
+            <div id="slowLoadWarning" class="slow-load-warning">
+                <strong>⚠️ หน้านี้ใช้เวลาโหลดนานเกินไป</strong>
+                <p>กรุณาทำตามขั้นตอนด้านล่างเพื่อเปิดในเบราว์เซอร์ภายนอก:</p>
+                <ol>
+                    <li>กดจุดสามจุด (⋮) หรือเมนูที่มุมขวาบน/ล่าง</li>
+                    <li>เลือก "<strong>เปิดในเบราว์เซอร์</strong>" หรือ "<strong>Open in Browser</strong>"</li>
+                    <li>เลือก Chrome (Android) หรือ Safari (iOS)</li>
+                </ol>
+                <p style="margin-top: 15px; font-size: 14px;">
+                    <strong>หมายเหตุ:</strong> การเปิดในเบราว์เซอร์ภายนอกจะช่วยให้ GPS ทำงานได้ถูกต้องและเร็วขึ้น
+                </p>
+            </div>
+            
             <?php if ($isAndroid): ?>
                 <!-- Android: ใช้ Intent และ fallback -->
                 <script>
+                    // ฟังก์ชันตรวจสอบว่าเป็น LINE browser หรือไม่
+                    function isLineBrowser() {
+                        var ua = navigator.userAgent.toLowerCase();
+                        return ua.indexOf('line') !== -1;
+                    }
+                    
                     // เก็บ token ใน localStorage ก่อน redirect
                     localStorage.setItem('smtc_token', '<?php echo $token; ?>');
                     
                     // พยายามเปิดด้วย Intent
                     var intentUrl = "intent://smtchecker.onrender.com/index.php?token=<?php echo urlencode($token); ?>#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=<?php echo urlencode($redirectUrl); ?>;end";
                     
+                    var redirectAttempted = false;
+                    var warningShown = false;
+                    
                     // ลองเปิดด้วย Intent
                     setTimeout(function() {
+                        redirectAttempted = true;
                         window.location.href = intentUrl;
                     }, 300);
                     
@@ -113,6 +168,28 @@ if ($isLineBrowser) {
                     setTimeout(function() {
                         document.getElementById('fallback').style.display = 'block';
                     }, 2000);
+                    
+                    // ตรวจสอบ slow loading (4 วินาที)
+                    setTimeout(function() {
+                        // ถ้ายังอยู่ใน LINE browser และยังไม่ได้ redirect สำเร็จ
+                        if (isLineBrowser() && redirectAttempted && !warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv && document.body) {
+                                warningDiv.classList.add('show');
+                                warningShown = true;
+                            }
+                        }
+                    }, 4000); // 4 seconds
+                    
+                    // ตรวจสอบเป็นระยะว่ายังอยู่ใน LINE browser หรือไม่ (ถ้าไม่ใช่ ให้ซ่อน warning)
+                    setInterval(function() {
+                        if (!isLineBrowser() && warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv) {
+                                warningDiv.classList.remove('show');
+                            }
+                        }
+                    }, 1000);
                 </script>
                 <div id="fallback" style="display: none;">
                     <p class="info">ถ้าไม่เปิดอัตโนมัติ กรุณากดปุ่มด้านล่าง:</p>
@@ -126,11 +203,26 @@ if ($isLineBrowser) {
             <?php elseif ($isIOS): ?>
                 <!-- iOS: ใช้ window.open และ fallback -->
                 <script>
+                    // ฟังก์ชันตรวจสอบว่าเป็น LINE browser หรือไม่
+                    function isLineBrowser() {
+                        var ua = navigator.userAgent.toLowerCase();
+                        return ua.indexOf('line') !== -1;
+                    }
+                    
                     // เก็บ token ใน localStorage
                     localStorage.setItem('smtc_token', '<?php echo $token; ?>');
                     
+                    var redirectAttempted = false;
+                    var opened = null;
+                    var warningShown = false;
+                    
                     // พยายามเปิดใน Safari
-                    var opened = window.open('<?php echo $redirectUrl; ?>', '_blank');
+                    try {
+                        opened = window.open('<?php echo $redirectUrl; ?>', '_blank');
+                        redirectAttempted = true;
+                    } catch(e) {
+                        redirectAttempted = true;
+                    }
                     
                     if (!opened || opened.closed || typeof opened.closed == 'undefined') {
                         // ถ้า popup ถูกบล็อก ให้แสดงปุ่ม
@@ -141,6 +233,28 @@ if ($isLineBrowser) {
                             document.body.innerHTML = '<div class="container"><h2>✅ เปิดใน Safari แล้ว</h2><p>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p></div>';
                         }, 1000);
                     }
+                    
+                    // ตรวจสอบ slow loading (4 วินาที)
+                    setTimeout(function() {
+                        // ถ้ายังอยู่ใน LINE browser และยังไม่ได้ redirect สำเร็จ
+                        if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined') && !warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv && document.body) {
+                                warningDiv.classList.add('show');
+                                warningShown = true;
+                            }
+                        }
+                    }, 4000); // 4 seconds
+                    
+                    // ตรวจสอบเป็นระยะว่ายังอยู่ใน LINE browser หรือไม่ (ถ้าไม่ใช่ ให้ซ่อน warning)
+                    setInterval(function() {
+                        if (!isLineBrowser() && warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv) {
+                                warningDiv.classList.remove('show');
+                            }
+                        }
+                    }, 1000);
                 </script>
                 <div id="fallback" style="display: none;">
                     <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
@@ -153,6 +267,36 @@ if ($isLineBrowser) {
                 
             <?php else: ?>
                 <!-- Fallback สำหรับ platform อื่นๆ -->
+                <script>
+                    // ฟังก์ชันตรวจสอบว่าเป็น LINE browser หรือไม่
+                    function isLineBrowser() {
+                        var ua = navigator.userAgent.toLowerCase();
+                        return ua.indexOf('line') !== -1;
+                    }
+                    
+                    var warningShown = false;
+                    
+                    // ตรวจสอบ slow loading (4 วินาที)
+                    setTimeout(function() {
+                        if (isLineBrowser() && !warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv && document.body) {
+                                warningDiv.classList.add('show');
+                                warningShown = true;
+                            }
+                        }
+                    }, 4000); // 4 seconds
+                    
+                    // ตรวจสอบเป็นระยะว่ายังอยู่ใน LINE browser หรือไม่ (ถ้าไม่ใช่ ให้ซ่อน warning)
+                    setInterval(function() {
+                        if (!isLineBrowser() && warningShown) {
+                            var warningDiv = document.getElementById('slowLoadWarning');
+                            if (warningDiv) {
+                                warningDiv.classList.remove('show');
+                            }
+                        }
+                    }, 1000);
+                </script>
                 <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดในเบราว์เซอร์</a>
             <?php endif; ?>
         </div>
