@@ -30,7 +30,7 @@ $_SESSION['date'] = $_SESSION['user'][1];
 
 <body>
     <img alt="main" src="images/S__16621602.png" />
-    <form method="post" action="user_action.php" onsubmit="return sendLocation(this)">
+    <form method="post" action="user_action.php" onsubmit="return attachLocation()">
         <div class="dashboardContainer">
             <label class="dataMessage">
                 <a> ชื่อ: <?= htmlspecialchars($_SESSION['name']) ?> ม.<?= htmlspecialchars($_SESSION['m']) ?> </a>
@@ -44,65 +44,99 @@ $_SESSION['date'] = $_SESSION['user'][1];
         </div>
     </form>
 
+    <script src="geolocation.js"></script>
     <script>
         let gpsReady = false;
         let gpsError = null;
+        let isRequesting = false;
 
         // ฟังก์ชันขอพิกัดตอนโหลดเว็บ
         window.onload = function () {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 0
-                });
-            } else {
-                gpsError = "เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง";
+            // ตรวจสอบว่าเป็น LINE browser และแจ้งเตือน
+            if (window.GeolocationUtil && window.GeolocationUtil.isLineBrowser()) {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'errorMsg';
+                warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; margin: 15px 0; border-radius: 5px; text-align: center;';
+                warningDiv.innerHTML = '⚠️ <strong>ตรวจพบ LINE Browser</strong><br>GPS อาจไม่ทำงานใน LINE Browser<br>กรุณาเปิดในเบราว์เซอร์ภายนอก (Chrome/Safari) เพื่อให้ GPS ทำงานได้ถูกต้อง';
+                document.querySelector('.dashboardContainer').insertBefore(warningDiv, document.querySelector('.dashboardContainer').firstChild);
             }
+            
+            requestLocation();
         };
 
+        function requestLocation() {
+            if (isRequesting) return;
+            isRequesting = true;
+            
+            if (!window.GeolocationUtil) {
+                gpsError = "ไม่สามารถโหลด Geolocation Utility ได้";
+                isRequesting = false;
+                return;
+            }
+
+            window.GeolocationUtil.request(
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                },
+                successCallback,
+                errorCallback,
+                2 // retry 2 times
+            );
+        }
+
         function successCallback(position) {
+            isRequesting = false;
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`)
-                .then(response => response.json())
-                .then(data => {
-                    const locationName = data.display_name || "ไม่ทราบชื่อสถานที่";
-
+            // ใช้ reverse geocoding จาก utility
+            window.GeolocationUtil.reverseGeocode(lat, lon)
+                .then(locationName => {
                     document.getElementById("locationField").value = lat + "," + lon;
                     document.getElementById("placeField").value = locationName;
-
                     gpsReady = true;
+                    
+                    // แสดงสถานะสำเร็จ (optional)
+                    console.log('✅ GPS location obtained:', lat, lon, locationName);
                 })
                 .catch(error => {
-                    gpsError = "เกิดข้อผิดพลาดจากการแปลงพิกัดเป็นสถานที่: " + error;
+                    // แม้ reverse geocode จะล้มเหลว แต่เรายังมี coordinates
+                    document.getElementById("locationField").value = lat + "," + lon;
+                    document.getElementById("placeField").value = "ไม่ทราบชื่อสถานที่";
+                    gpsReady = true;
+                    console.warn('⚠️ Reverse geocoding failed, but coordinates saved:', error);
                 });
         }
 
         function errorCallback(error) {
-            let message;
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    message = "ผู้ใช้ปฏิเสธการเข้าถึงตำแหน่ง \nวิธีแก้ลอง:\nตรวจสอบว่าผู้ใช้กด Allow Location ตอนที่เบราว์เซอร์ถามหรือไม่\niPhone: ไปที่ Settings > LINE > Location แล้วเลือก While Using the App\nAndroid: ไปที่ Settings > Apps > LINE > Permissions > Location แล้วกด Allow";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message = "ไม่สามารถระบุตำแหน่งได้ (สัญญาณ GPS หรือเครือข่ายไม่พร้อม)\nวิธีแก้ลอง:\nเปิด Location (GPS) Mode และตรวจสอบว่าเครื่องมีสัญญาณอินเทอร์เน็ตหรือไม่\nตรวจสอบว่าเครื่องมีสัญญาณอินเทอร์เน็ตหรือไม่ (บางครั้งต้องใช้ Network ช่วย)\nถ้าใช้ในอาคาร ลองย้ายออกไปที่โล่งแจ้ง";
-                    break;
-                case error.TIMEOUT:
-                    message = "หมดเวลาในการขอตำแหน่ง (Timeout)\nวิธีแก้ลอง:\nเปิด GPS + อินเทอร์เน็ตพร้อมกัน";
-                    break;
-                default:
-                    message = "ไม่ทราบข้อผิดพลาด\nลองตรวจสอบว่าเว็บทำงานผ่าน HTTPS ไหม\nวิธีแก้ลอง:\nตรวจสอบว่า code ไม่โดนบล็อกโดย AdBlock / Security App";
-                    break;
-            }
-            gpsError = `${message} (รายละเอียด: ${error.message}\n(ErrorCode: ${error.code})`;
+            isRequesting = false;
+            gpsError = window.GeolocationUtil.getErrorMessage(error);
+            console.error('❌ Geolocation error:', error);
         }
 
         // ฟังก์ชันที่ทำงานก่อนส่งฟอร์ม
         function attachLocation() {
             if (!gpsReady) {
-                alert("❌ ไม่สามารถส่งฟอร์มได้ เพราะยังไม่ได้รับตำแหน่ง\n" + (gpsError || "กรุณาลองใหม่อีกครั้ง"));
+                let errorMsg = "❌ ไม่สามารถส่งฟอร์มได้ เพราะยังไม่ได้รับตำแหน่ง\n\n";
+                
+                if (gpsError) {
+                    errorMsg += gpsError;
+                } else {
+                    errorMsg += "กรุณารอสักครู่เพื่อให้ระบบขอตำแหน่ง GPS\n\n";
+                    errorMsg += "ถ้ายังไม่ได้ตำแหน่ง:\n";
+                    errorMsg += "1. ตรวจสอบว่าได้อนุญาตการเข้าถึงตำแหน่ง\n";
+                    errorMsg += "2. เปิด GPS และอินเทอร์เน็ต\n";
+                    errorMsg += "3. ลองรีเฟรชหน้าเว็บ";
+                    
+                    // ลองขออีกครั้ง
+                    if (!isRequesting) {
+                        requestLocation();
+                    }
+                }
+                
+                alert(errorMsg);
                 return false;
             }
             return true;
