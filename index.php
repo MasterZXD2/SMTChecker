@@ -12,8 +12,8 @@ function generateToken($length = 32) {
 
 // ถ้าเข้าจาก LINE
 if ($isLineBrowser) {
-    // สร้าง token ถ้ายังไม่มี (presence-based only, no expiration)
-    if (!isset($_SESSION['access_token']) || empty($_SESSION['access_token'])) {
+    // สร้าง token ถ้ายังไม่มี
+    if (!isset($_SESSION['access_token'])) {
         $_SESSION['access_token'] = generateToken();
     }
     
@@ -107,34 +107,20 @@ if ($isLineBrowser) {
                     // ลองเปิดด้วย Intent
                     setTimeout(function() {
                         window.location.href = intentUrl;
-                    }, 500);
+                    }, 300);
                     
-                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback หลังจาก 2.5 วินาที
+                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback
                     setTimeout(function() {
                         document.getElementById('fallback').style.display = 'block';
-                        document.getElementById('autoRedirect').style.display = 'none';
-                    }, 2500);
+                    }, 2000);
                 </script>
-                <div id="autoRedirect">
-                    <p class="info" style="color: #00C300; font-weight: bold;">
-                        ⏳ กำลังเปิดใน Chrome อัตโนมัติ...
-                    </p>
-                </div>
                 <div id="fallback" style="display: none;">
-                    <p class="info" style="color: #d32f2f; font-weight: bold; margin-bottom: 20px;">
-                        ⚠️ ไม่สามารถเปิดอัตโนมัติได้
+                    <p class="info">ถ้าไม่เปิดอัตโนมัติ กรุณากดปุ่มด้านล่าง:</p>
+                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดใน Chrome</a>
+                    <p class="info" style="font-size: 14px; margin-top: 15px;">
+                        หรือ:<br>
+                        กดจุดสามจุด (⋮) มุมขวาบน → เลือก "เปิดในเบราว์เซอร์"
                     </p>
-                    <p class="info">กรุณาทำตามขั้นตอนด้านล่าง:</p>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-                        <p style="margin: 10px 0; font-weight: bold;">วิธีที่ 1: ใช้ปุ่มด้านล่าง</p>
-                        <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" style="display: block; text-align: center;">เปิดใน Chrome</a>
-                        <p style="margin: 20px 0 10px 0; font-weight: bold;">วิธีที่ 2: ใช้เมนู LINE</p>
-                        <ol style="margin: 0; padding-left: 20px; color: #666;">
-                            <li>กดจุดสามจุด (⋮) มุมขวาบนของหน้าจอ</li>
-                            <li>เลือก "<strong>เปิดในเบราว์เซอร์</strong>" หรือ "<strong>Open in Browser</strong>"</li>
-                            <li>เลือก Chrome</li>
-                        </ol>
-                    </div>
                 </div>
                 
             <?php elseif ($isIOS): ?>
@@ -148,36 +134,21 @@ if ($isLineBrowser) {
                     
                     if (!opened || opened.closed || typeof opened.closed == 'undefined') {
                         // ถ้า popup ถูกบล็อก ให้แสดงปุ่ม
-                        setTimeout(function() {
-                            document.getElementById('fallback').style.display = 'block';
-                            document.getElementById('autoRedirect').style.display = 'none';
-                        }, 1500);
+                        document.getElementById('fallback').style.display = 'block';
                     } else {
-                        // ถ้าเปิดสำเร็จ ให้แสดงข้อความ
+                        // ถ้าเปิดสำเร็จ ให้ปิดหน้าปัจจุบันหลังจาก 1 วินาที
                         setTimeout(function() {
-                            document.getElementById('autoRedirect').innerHTML = '<h2 style="color: #00C300;">✅ เปิดใน Safari แล้ว</h2><p class="info">กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p>';
+                            document.body.innerHTML = '<div class="container"><h2>✅ เปิดใน Safari แล้ว</h2><p>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p></div>';
                         }, 1000);
                     }
                 </script>
-                <div id="autoRedirect">
-                    <p class="info" style="color: #007aff; font-weight: bold;">
-                        ⏳ กำลังเปิดใน Safari อัตโนมัติ...
-                    </p>
-                </div>
                 <div id="fallback" style="display: none;">
-                    <p class="info" style="color: #d32f2f; font-weight: bold; margin-bottom: 20px;">
-                        ⚠️ ไม่สามารถเปิดอัตโนมัติได้
+                    <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
+                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer">เปิดใน Safari</a>
+                    <p class="info" style="font-size: 14px; margin-top: 15px;">
+                        หรือ:<br>
+                        กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
                     </p>
-                    <p class="info">กรุณาทำตามขั้นตอนด้านล่าง:</p>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
-                        <p style="margin: 10px 0; font-weight: bold;">วิธีที่ 1: ใช้ปุ่มด้านล่าง</p>
-                        <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer" style="display: block; text-align: center;">เปิดใน Safari</a>
-                        <p style="margin: 20px 0 10px 0; font-weight: bold;">วิธีที่ 2: ใช้เมนู LINE</p>
-                        <ol style="margin: 0; padding-left: 20px; color: #666;">
-                            <li>กดไอคอน Share (□↑) มุมขวาบนของหน้าจอ</li>
-                            <li>เลือก "<strong>Safari</strong>" หรือ "<strong>เปิดในเบราว์เซอร์</strong>"</li>
-                        </ol>
-                    </div>
                 </div>
                 
             <?php else: ?>
@@ -191,78 +162,18 @@ if ($isLineBrowser) {
     exit();
 }
 
-// ถ้าเข้าจาก browser ปกติพร้อม token
-if ($token) {
-    // ตรวจสอบว่า token มีอยู่ใน session (presence-based only, no expiration check)
-    $tokenValid = false;
-    
-    // ตรวจสอบ token จาก session - ถ้ามี token ตรงกันก็ใช้ได้
-    if (isset($_SESSION['access_token']) && $_SESSION['access_token'] === $token) {
-        $tokenValid = true;
-    } else {
-        // ถ้า token ใน URL ไม่ตรงกับ session แต่ token ยังไม่ถูกตั้งค่าใน session
-        // อาจเป็นกรณีที่ session ถูก reset แต่ token ยัง valid จาก URL
-        // ในกรณีนี้ให้ตั้งค่า token ใหม่ใน session
-        $_SESSION['access_token'] = $token;
-        $tokenValid = true;
-    }
-    
-    if (!$tokenValid) {
-        // Token ไม่ถูกต้อง (ไม่พบใน session และไม่สามารถสร้างใหม่ได้)
-        ?>
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invalid Token</title>
-            <style>
-                body {
-                    font-family: 'Noto Sans Thai', sans-serif;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    margin: 0;
-                    padding: 20px;
-                    background: #f5f5f5;
-                    text-align: center;
-                }
-                .container {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    max-width: 500px;
-                }
-                h2 { color: #d32f2f; margin-bottom: 20px; }
-                p { color: #666; line-height: 1.6; margin: 10px 0; }
-                .icon { font-size: 64px; margin-bottom: 20px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="icon">🔒</div>
-                <h2>❌ Token ไม่ถูกต้อง</h2>
-                <p>Token สำหรับเข้าถึงเว็บไซต์ไม่ถูกต้อง</p>
-                <p><strong>กรุณาเปิดเว็บไซต์ผ่านลิงก์จาก LINE อีกครั้ง</strong></p>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit();
-    }
-    
-    // Token ถูกต้อง - ตั้งค่า session
+// ถ้าเข้าจาก browser ปกติพร้อม token (presence-based validation only)
+if ($token && !empty(trim($token))) {
+    // เก็บ token ใน session (presence-based only, no expiration check)
     $_SESSION['token'] = $token;
+    $_SESSION['access_token'] = $token;
     
     // เก็บ token ใน cookie เพื่อเป็น backup (long expiry for persistence)
     setcookie('smtc_token', $token, time() + (86400 * 30), '/', '', true, true); // 30 days
     
     // Redirect ไปยังหน้าถัดไป
     if (!isset($_SESSION["user"])) {
-        header("Location: login.php");
+        header("Location: login.php?token=" . urlencode($token));
     } else {
         header("Location: user.php");
     }
@@ -270,81 +181,24 @@ if ($token) {
 }
 
 // ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback - presence-based only)
-if (isset($_COOKIE['smtc_token']) && !isset($_SESSION['token'])) {
+if (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
     $cookieToken = $_COOKIE['smtc_token'];
+    $_SESSION['token'] = $cookieToken;
+    $_SESSION['access_token'] = $cookieToken;
     
-    // ตรวจสอบว่า cookie token ตรงกับ session token (presence-based, no expiration)
-    if (isset($_SESSION['access_token']) && $cookieToken === $_SESSION['access_token']) {
-        $_SESSION['token'] = $cookieToken;
-        // Redirect ไปยังหน้าถัดไป
-        if (!isset($_SESSION["user"])) {
-            header("Location: login.php");
-        } else {
-            header("Location: user.php");
-        }
-        exit();
-    } else if (!isset($_SESSION['access_token'])) {
-        // ถ้ายังไม่มี access_token ใน session แต่มีใน cookie ให้ตั้งค่าใหม่
-        $_SESSION['access_token'] = $cookieToken;
-        $_SESSION['token'] = $cookieToken;
-        // Redirect ไปยังหน้าถัดไป
-        if (!isset($_SESSION["user"])) {
-            header("Location: login.php");
-        } else {
-            header("Location: user.php");
-        }
-        exit();
+    // Redirect ไปยังหน้าถัดไป
+    if (!isset($_SESSION["user"])) {
+        header("Location: login.php?token=" . urlencode($cookieToken));
+    } else {
+        header("Location: user.php");
     }
-}
-
-// ถ้าไม่มี token และไม่ใช่ LINE browser - STRICT: Only allow access from LINE
-if (!$token && !$isLineBrowser) {
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Access Denied</title>
-        <style>
-            body {
-                font-family: 'Noto Sans Thai', sans-serif;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-                background: #f5f5f5;
-                text-align: center;
-            }
-            .container {
-                background: white;
-                padding: 40px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                max-width: 500px;
-            }
-            h2 { color: #d32f2f; margin-bottom: 20px; }
-            p { color: #666; line-height: 1.6; margin: 10px 0; }
-            .icon { font-size: 64px; margin-bottom: 20px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="icon">🚫</div>
-            <h2>❌ ไม่สามารถเข้าถึงได้</h2>
-            <p><strong>เว็บไซต์นี้สามารถเข้าถึงได้ผ่าน LINE เท่านั้น</strong></p>
-            <p>กรุณาเปิดเว็บไซต์ผ่านลิงก์ที่ส่งใน LINE</p>
-            <p style="margin-top: 30px; font-size: 14px; color: #999;">
-                หากคุณกำลังใช้ LINE อยู่แล้ว<br>
-                กรุณารีเฟรชหน้าเว็บหรือเปิดลิงก์ใหม่อีกครั้ง
-            </p>
-        </div>
-    </body>
-    </html>
-    <?php
     exit();
 }
+
+// ถ้าไม่มี token และไม่ใช่ LINE browser
+echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Error</title></head><body>";
+echo "<h2>❌ กรุณาเปิดจาก LINE ก่อน</h2>";
+echo "<p>เว็บไซต์นี้ต้องเปิดผ่านลิงก์จาก LINE เพื่อความปลอดภัย</p>";
+echo "</body></html>";
+exit();
 ?>

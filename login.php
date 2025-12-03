@@ -1,61 +1,38 @@
 <?php 
 session_start();
 
-// STRICT: Only allow access if token exists (which means user came through LINE)
-if (!isset($_SESSION['token']) || empty($_SESSION['token'])) {
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Access Denied</title>
-        <style>
-            body {
-                font-family: 'Noto Sans Thai', sans-serif;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-                background: #f5f5f5;
-                text-align: center;
-            }
-            .container {
-                background: white;
-                padding: 40px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                max-width: 500px;
-            }
-            h2 { color: #d32f2f; margin-bottom: 20px; }
-            p { color: #666; line-height: 1.6; margin: 10px 0; }
-            .icon { font-size: 64px; margin-bottom: 20px; }
-            .btn {
-                display: inline-block;
-                padding: 12px 24px;
-                background: #00C300;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-                margin-top: 20px;
-                font-weight: bold;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="icon">🔒</div>
-            <h2>❌ Token ไม่ถูกต้อง หรือหมดอายุ</h2>
-            <p><strong>เว็บไซต์นี้สามารถเข้าถึงได้ผ่าน LINE เท่านั้น</strong></p>
-            <p>กรุณาเปิดเว็บไซต์ผ่านลิงก์ที่ส่งใน LINE</p>
-            <a href="index.php" class="btn">กลับไปหน้าแรก</a>
-        </div>
-    </body>
-    </html>
-    <?php
+$userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
+
+if (strpos($userAgent, "line") === false) {
+    //echo "กรุณาเปิดจากเว็บจากลิ้งที่อาจารส่งใน LINE และผ่านในโทรศัพท์เท่านั้น";
+    //exit;
+}
+
+// Presence-based token validation: accept any non-empty token from URL, session, or cookie
+$token = null;
+
+// 1. Check token from URL parameter (highest priority)
+if (isset($_GET['token']) && !empty(trim($_GET['token']))) {
+    $token = trim($_GET['token']);
+    $_SESSION['token'] = $token;
+    $_SESSION['access_token'] = $token;
+    // Store in cookie as backup
+    setcookie('smtc_token', $token, time() + (86400 * 30), '/', '', true, true);
+}
+// 2. Check token from session
+elseif (isset($_SESSION['token']) && !empty(trim($_SESSION['token']))) {
+    $token = trim($_SESSION['token']);
+}
+// 3. Check token from cookie (fallback)
+elseif (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
+    $token = trim($_COOKIE['smtc_token']);
+    $_SESSION['token'] = $token;
+    $_SESSION['access_token'] = $token;
+}
+
+// If no token found anywhere, deny access
+if (!$token || empty($token)) {
+    echo "❌ Token ไม่ถูกต้อง หรือหมดอายุ";
     exit();
 }
 
