@@ -1,0 +1,18 @@
+# Tokens directory - contains sensitive token data
+tokens/
+*.json
+
+# PHP session files
+sess_*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

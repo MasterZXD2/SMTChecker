@@ -5,31 +5,128 @@ $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
 $token = isset($_GET['token']) ? $_GET['token'] : null;
 $isLineBrowser = (strpos($userAgent, "line") !== false);
 
+// Token storage directory
+define('TOKEN_DIR', __DIR__ . '/tokens');
+define('TOKEN_EXPIRY', 3600); // 1 hour in seconds
+define('TOKEN_GRACE_PERIOD', 120); // 2 minutes grace period for browser transition
+
+// สร้าง directory สำหรับเก็บ tokens ถ้ายังไม่มี
+if (!is_dir(TOKEN_DIR)) {
+    mkdir(TOKEN_DIR, 0755, true);
+}
+
 // ฟังก์ชันสร้าง token
 function generateToken($length = 32) {
     return bin2hex(random_bytes($length / 2));
 }
 
+// ฟังก์ชันเก็บ token ในไฟล์ (persist across sessions)
+function storeToken($token, $createdAt = null) {
+    if ($createdAt === null) {
+        $createdAt = time();
+    }
+    
+    $tokenFile = TOKEN_DIR . '/' . md5($token) . '.json';
+    $tokenData = [
+        'token' => $token,
+        'created_at' => $createdAt,
+        'expires_at' => $createdAt + TOKEN_EXPIRY
+    ];
+    
+    file_put_contents($tokenFile, json_encode($tokenData), LOCK_EX);
+    return true;
+}
+
+// ฟังก์ชันตรวจสอบ token จากไฟล์
+function validateToken($token) {
+    $tokenFile = TOKEN_DIR . '/' . md5($token) . '.json';
+    
+    if (!file_exists($tokenFile)) {
+        return false;
+    }
+    
+    $tokenData = json_decode(file_get_contents($tokenFile), true);
+    
+    if (!$tokenData || !isset($tokenData['created_at'])) {
+        return false;
+    }
+    
+    $now = time();
+    $createdAt = $tokenData['created_at'];
+    $expiresAt = $tokenData['expires_at'];
+    
+    // ตรวจสอบว่า token ยังไม่หมดอายุ (รวม grace period)
+    $maxValidTime = $expiresAt + TOKEN_GRACE_PERIOD;
+    
+    if ($now > $maxValidTime) {
+        // Token หมดอายุแล้ว - ลบไฟล์
+        @unlink($tokenFile);
+        return false;
+    }
+    
+    // Token ถูกต้อง - อัพเดท timestamp ถ้าใกล้หมดอายุ (extend grace period)
+    if ($now > $expiresAt && $now <= $maxValidTime) {
+        // อยู่ใน grace period - ยังใช้ได้
+        return true;
+    }
+    
+    return true;
+}
+
+// ฟังก์ชันลบ token เก่าที่หมดอายุแล้ว (cleanup)
+function cleanupExpiredTokens() {
+    $files = glob(TOKEN_DIR . '/*.json');
+    $now = time();
+    $cleaned = 0;
+    
+    foreach ($files as $file) {
+        $tokenData = json_decode(file_get_contents($file), true);
+        if ($tokenData && isset($tokenData['expires_at'])) {
+            // ลบ token ที่หมดอายุแล้วเกิน grace period
+            if ($now > ($tokenData['expires_at'] + TOKEN_GRACE_PERIOD)) {
+                @unlink($file);
+                $cleaned++;
+            }
+        }
+    }
+    
+    return $cleaned;
+}
+
+// ทำความสะอาด token เก่า (รันแค่บางครั้งเพื่อไม่ให้ช้า)
+if (rand(1, 100) <= 5) { // 5% chance to cleanup
+    cleanupExpiredTokens();
+}
+
 // ถ้าเข้าจาก LINE
 if ($isLineBrowser) {
-    // สร้าง token ถ้ายังไม่มี หรือ token หมดอายุ (1 ชั่วโมง)
-    $tokenExpiry = 3600; // 1 hour in seconds
+    // ตรวจสอบว่ามี token ใน session หรือไม่
     $shouldGenerateNewToken = true;
+    $createdAt = time();
     
-    if (isset($_SESSION['access_token']) && isset($_SESSION['token_created_at'])) {
-        $tokenAge = time() - $_SESSION['token_created_at'];
-        if ($tokenAge < $tokenExpiry) {
-            // Token ยังไม่หมดอายุ
+    if (isset($_SESSION['access_token'])) {
+        $existingToken = $_SESSION['access_token'];
+        // ตรวจสอบว่า token ใน session ยัง valid อยู่หรือไม่
+        if (validateToken($existingToken)) {
+            // Token ยังใช้ได้ - ใช้ token เดิม
+            $token = $existingToken;
             $shouldGenerateNewToken = false;
         }
     }
     
     if ($shouldGenerateNewToken) {
-        $_SESSION['access_token'] = generateToken();
-        $_SESSION['token_created_at'] = time();
+        // สร้าง token ใหม่
+        $token = generateToken();
+        $createdAt = time();
+        
+        // เก็บ token ในไฟล์ (persist across sessions)
+        storeToken($token, $createdAt);
+        
+        // เก็บ token ใน session ด้วย (for backward compatibility)
+        $_SESSION['access_token'] = $token;
+        $_SESSION['token_created_at'] = $createdAt;
     }
     
-    $token = $_SESSION['access_token'];
     $baseUrl = "https://smtchecker.onrender.com";
     $redirectUrl = $baseUrl . "/index.php?token=" . urlencode($token);
     
@@ -205,29 +302,25 @@ if ($isLineBrowser) {
 
 // ถ้าเข้าจาก browser ปกติพร้อม token
 if ($token) {
-    // ตรวจสอบว่า token ถูกต้องและยังไม่หมดอายุ
-    $tokenValid = false;
-    $tokenExpiry = 3600; // 1 hour
+    // ตรวจสอบ token จากไฟล์ (persist across sessions)
+    $tokenValid = validateToken($token);
     
-    // ตรวจสอบ token จาก session
-    if (isset($_SESSION['access_token']) && $_SESSION['access_token'] === $token) {
-        // ตรวจสอบอายุ token
+    // ถ้า token ไม่ valid จากไฟล์ แต่มีใน session (backward compatibility)
+    if (!$tokenValid && isset($_SESSION['access_token']) && $_SESSION['access_token'] === $token) {
+        // ตรวจสอบอายุ token จาก session
         if (isset($_SESSION['token_created_at'])) {
             $tokenAge = time() - $_SESSION['token_created_at'];
-            if ($tokenAge < $tokenExpiry) {
+            $maxAge = TOKEN_EXPIRY + TOKEN_GRACE_PERIOD;
+            if ($tokenAge < $maxAge) {
                 $tokenValid = true;
+                // เก็บ token ในไฟล์เพื่อใช้ในครั้งต่อไป
+                storeToken($token, $_SESSION['token_created_at']);
             }
-        } else {
-            // ถ้าไม่มี timestamp ให้ถือว่าเป็น token เก่า (backward compatibility)
-            // แต่จะสร้าง timestamp ใหม่
-            $_SESSION['token_created_at'] = time();
-            $tokenValid = true;
         }
     }
     
     if (!$tokenValid) {
         // Token ไม่ถูกต้องหรือหมดอายุ
-        session_destroy();
         ?>
         <!DOCTYPE html>
         <html>
@@ -276,8 +369,21 @@ if ($token) {
     // Token ถูกต้อง - ตั้งค่า session
     $_SESSION['token'] = $token;
     
-    // เก็บ token ใน cookie เพื่อเป็น backup (expires in 1 hour)
-    setcookie('smtc_token', $token, time() + 3600, '/', '', true, true);
+    // อัพเดท session access_token เพื่อความเข้ากันได้
+    if (!isset($_SESSION['access_token']) || $_SESSION['access_token'] !== $token) {
+        $_SESSION['access_token'] = $token;
+        // อ่าน timestamp จากไฟล์ token
+        $tokenFile = TOKEN_DIR . '/' . md5($token) . '.json';
+        if (file_exists($tokenFile)) {
+            $tokenData = json_decode(file_get_contents($tokenFile), true);
+            if ($tokenData && isset($tokenData['created_at'])) {
+                $_SESSION['token_created_at'] = $tokenData['created_at'];
+            }
+        }
+    }
+    
+    // เก็บ token ใน cookie เพื่อเป็น backup (expires in 1 hour + grace period)
+    setcookie('smtc_token', $token, time() + TOKEN_EXPIRY + TOKEN_GRACE_PERIOD, '/', '', true, true);
     
     // Redirect ไปยังหน้าถัดไป
     if (!isset($_SESSION["user"])) {
@@ -288,25 +394,31 @@ if ($token) {
     exit();
 }
 
-// ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback - only if token was set within last hour)
+// ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback - validate from file storage)
 if (isset($_COOKIE['smtc_token']) && !isset($_SESSION['token'])) {
-    // Validate that cookie token matches a valid session token and hasn't expired
-    if (isset($_SESSION['access_token']) && $_COOKIE['smtc_token'] === $_SESSION['access_token']) {
-        // ตรวจสอบอายุ token
-        $tokenExpiry = 3600;
-        if (isset($_SESSION['token_created_at'])) {
-            $tokenAge = time() - $_SESSION['token_created_at'];
-            if ($tokenAge < $tokenExpiry) {
-                $_SESSION['token'] = $_COOKIE['smtc_token'];
-                // Redirect ไปยังหน้าถัดไป
-                if (!isset($_SESSION["user"])) {
-                    header("Location: login.php");
-                } else {
-                    header("Location: user.php");
-                }
-                exit();
+    $cookieToken = $_COOKIE['smtc_token'];
+    
+    // ตรวจสอบ token จากไฟล์ (persist across sessions)
+    if (validateToken($cookieToken)) {
+        $_SESSION['token'] = $cookieToken;
+        $_SESSION['access_token'] = $cookieToken;
+        
+        // อ่าน timestamp จากไฟล์
+        $tokenFile = TOKEN_DIR . '/' . md5($cookieToken) . '.json';
+        if (file_exists($tokenFile)) {
+            $tokenData = json_decode(file_get_contents($tokenFile), true);
+            if ($tokenData && isset($tokenData['created_at'])) {
+                $_SESSION['token_created_at'] = $tokenData['created_at'];
             }
         }
+        
+        // Redirect ไปยังหน้าถัดไป
+        if (!isset($_SESSION["user"])) {
+            header("Location: login.php");
+        } else {
+            header("Location: user.php");
+        }
+        exit();
     }
 }
 
