@@ -52,17 +52,40 @@ $_SESSION['date'] = $_SESSION['user'][1];
 
         // ฟังก์ชันขอพิกัดตอนโหลดเว็บ
         window.onload = function () {
+            // Initialize global flag
+            window.gpsReady = false;
+            
             // ตรวจสอบว่าเป็น LINE browser และแจ้งเตือน
             if (window.GeolocationUtil && window.GeolocationUtil.isLineBrowser()) {
                 const warningDiv = document.createElement('div');
                 warningDiv.className = 'errorMsg';
                 warningDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 15px; margin: 15px 0; border-radius: 5px; text-align: center;';
-                warningDiv.innerHTML = '⚠️ <strong>ตรวจพบ LINE Browser</strong><br>GPS อาจไม่ทำงานใน LINE Browser<br>กรุณาเปิดในเบราว์เซอร์ภายนอก (Chrome/Safari) เพื่อให้ GPS ทำงานได้ถูกต้อง';
+                
+                let warningText = '⚠️ <strong>ตรวจพบ LINE Browser</strong><br>GPS อาจไม่ทำงานใน LINE Browser<br>กรุณาเปิดในเบราว์เซอร์ภายนอก (Chrome/Safari) เพื่อให้ GPS ทำงานได้ถูกต้อง';
+                
+                if (window.GeolocationUtil.isAndroid()) {
+                    warningText += '<br><br><strong>สำหรับ Android:</strong><br>1. กดจุดสามจุด (⋮) มุมขวาบน<br>2. เลือก "เปิดในเบราว์เซอร์"<br>3. เลือก Chrome';
+                }
+                
+                warningDiv.innerHTML = warningText;
                 document.querySelector('.dashboardContainer').insertBefore(warningDiv, document.querySelector('.dashboardContainer').firstChild);
             }
             
-            requestLocation();
+            // Delay request slightly for Android to ensure page is fully loaded
+            if (window.GeolocationUtil && window.GeolocationUtil.isAndroid()) {
+                setTimeout(requestLocation, 500);
+            } else {
+                requestLocation();
+            }
         };
+        
+        // Handle page visibility change (user switched to external browser)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && !gpsReady && !isRequesting) {
+                console.log('📱 Page became visible, retrying geolocation...');
+                setTimeout(requestLocation, 1000);
+            }
+        });
 
         function requestLocation() {
             if (isRequesting) return;
@@ -97,15 +120,22 @@ $_SESSION['date'] = $_SESSION['user'][1];
                     document.getElementById("locationField").value = lat + "," + lon;
                     document.getElementById("placeField").value = locationName;
                     gpsReady = true;
+                    window.gpsReady = true; // Set global flag
                     
                     // แสดงสถานะสำเร็จ (optional)
                     console.log('✅ GPS location obtained:', lat, lon, locationName);
+                    
+                    // Android-specific: Show success message briefly
+                    if (window.GeolocationUtil.isAndroid()) {
+                        console.log('✅ Android GPS location successfully retrieved');
+                    }
                 })
                 .catch(error => {
                     // แม้ reverse geocode จะล้มเหลว แต่เรายังมี coordinates
                     document.getElementById("locationField").value = lat + "," + lon;
                     document.getElementById("placeField").value = "ไม่ทราบชื่อสถานที่";
                     gpsReady = true;
+                    window.gpsReady = true; // Set global flag
                     console.warn('⚠️ Reverse geocoding failed, but coordinates saved:', error);
                 });
         }
