@@ -153,6 +153,10 @@ if ($isLineBrowser) {
                 from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(10px); }
+            }
             .slow-load-warning strong {
                 display: block;
                 margin-bottom: 10px;
@@ -384,6 +388,30 @@ if ($isLineBrowser) {
                             descDiv.innerHTML = description;
                             stepsDiv.innerHTML = steps;
                             issueDiv.style.display = 'block';
+                            issueDiv.classList.add('show');
+                            
+                            // Auto-scroll to the explanation after a brief delay
+                            setTimeout(function() {
+                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
+                            
+                            // Hide scroll indicator if it exists
+                            var scrollIndicator = document.getElementById('scrollIndicator');
+                            if (scrollIndicator) {
+                                scrollIndicator.style.display = 'none';
+                            }
+                        }
+                    }
+                    
+                    // Check if content is below viewport and show scroll indicator
+                    function checkScrollNeeded() {
+                        var issueDiv = document.getElementById('issueExplanation');
+                        if (issueDiv && issueDiv.style.display !== 'none') {
+                            var rect = issueDiv.getBoundingClientRect();
+                            var scrollIndicator = document.getElementById('scrollIndicator');
+                            if (rect.top > window.innerHeight && scrollIndicator) {
+                                scrollIndicator.style.display = 'block';
+                            }
                         }
                     }
                     
@@ -453,17 +481,20 @@ if ($isLineBrowser) {
                             
                             // Show detailed explanation
                             showIssueExplanation(
+                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
                                 '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
                                 '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
                                 '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                                '<strong>วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol>' +
+                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol style="font-size: 16px; line-height: 2;">' +
                                 '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
                                 '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
-                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอขึ้นลง หรือกดที่มุมขวาล่าง</p>'
                             );
+                            
+                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 60000); // 1 minute
                     
@@ -541,6 +572,30 @@ if ($isLineBrowser) {
                             descDiv.innerHTML = description;
                             stepsDiv.innerHTML = steps;
                             issueDiv.style.display = 'block';
+                            issueDiv.classList.add('show');
+                            
+                            // Auto-scroll to the explanation after a brief delay
+                            setTimeout(function() {
+                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 100);
+                            
+                            // Hide scroll indicator if it exists
+                            var scrollIndicator = document.getElementById('scrollIndicator');
+                            if (scrollIndicator) {
+                                scrollIndicator.style.display = 'none';
+                            }
+                        }
+                    }
+                    
+                    // Check if content is below viewport and show scroll indicator
+                    function checkScrollNeeded() {
+                        var issueDiv = document.getElementById('issueExplanation');
+                        if (issueDiv && issueDiv.style.display !== 'none') {
+                            var rect = issueDiv.getBoundingClientRect();
+                            var scrollIndicator = document.getElementById('scrollIndicator');
+                            if (rect.top > window.innerHeight && scrollIndicator) {
+                                scrollIndicator.style.display = 'block';
+                            }
                         }
                     }
                     
@@ -564,19 +619,22 @@ if ($isLineBrowser) {
                         var menuIcon = isIPad() ? 'จุดสามจุด (⋮)' : 'ไอคอน Share (□↑)';
                         
                         showIssueExplanation(
+                            '<strong>เกิดอะไรขึ้น?</strong><br>' +
                             'ระบบไม่สามารถเปิด Safari อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
                             '• Popup blocker ของ LINE บล็อกการเปิดเบราว์เซอร์<br>' +
                             '• การตั้งค่าความปลอดภัยของ LINE<br>' +
                             '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                            '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
+                            '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol style="font-size: 16px; line-height: 2;">' +
                             '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
                             (isIPad() ? 
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
                                 '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
                             ) +
-                            '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                            '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
                             '</ol>'
                         );
+                        
+                        setTimeout(checkScrollNeeded, 200);
                     } else {
                         // ถ้าเปิดสำเร็จ ให้ปิดหน้าปัจจุบันหลังจาก 1 วินาที
                         updateStatus('<strong>✅ เปิดใน Safari สำเร็จ!</strong><br>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา', 'success');
@@ -620,19 +678,22 @@ if ($isLineBrowser) {
                             
                             // Show detailed explanation
                             showIssueExplanation(
+                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
                                 '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
                                 '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
                                 '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                                '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
+                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol style="font-size: 16px; line-height: 2;">' +
                                 '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
                                 (isIPad() ? 
                                     '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
                                     '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
                                 ) +
-                                '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอ</p>'
                             );
+                            
+                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 60000); // 1 minute
                     
