@@ -30,7 +30,7 @@ $_SESSION['date'] = $_SESSION['user'][1];
 
 <body>
     <img alt="main" src="images/S__16621602.png" />
-    <form method="post" action="user_action.php" onsubmit="return attachLocation()">
+    <form method="post" action="checkin_gps.php" onsubmit="return true;">
         <div class="dashboardContainer">
             <label class="dataMessage">
                 <a> ชื่อ: <?= htmlspecialchars($_SESSION['name']) ?> ม.<?= htmlspecialchars($_SESSION['m']) ?> </a>

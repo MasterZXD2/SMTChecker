@@ -115,6 +115,74 @@ if ($isLineBrowser) {
                 margin: 8px 0;
                 line-height: 1.6;
             }
+            /* Help Popup Modal */
+            .help-popup {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 10000;
+                align-items: center;
+                justify-content: center;
+            }
+            .help-popup.show {
+                display: flex;
+                animation: fadeIn 0.3s ease-in;
+            }
+            .help-popup-content {
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                max-width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                position: relative;
+            }
+            .help-popup-close {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                background: #f0f0f0;
+                border: none;
+                border-radius: 50%;
+                width: 35px;
+                height: 35px;
+                font-size: 20px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .help-popup-close:hover {
+                background: #e0e0e0;
+            }
+            .help-popup h3 {
+                margin-top: 0;
+                color: #00C300;
+                font-size: 22px;
+            }
+            .help-popup ol {
+                margin: 15px 0;
+                padding-left: 25px;
+            }
+            .help-popup li {
+                margin: 10px 0;
+                line-height: 1.8;
+            }
+            .help-popup-btn {
+                display: inline-block;
+                padding: 12px 25px;
+                background: #00C300;
+                color: white;
+                text-decoration: none;
+                border-radius: 8px;
+                margin-top: 20px;
+                font-weight: bold;
+            }
         </style>
     </head>
     <body>
@@ -138,6 +206,19 @@ if ($isLineBrowser) {
                 <p style="margin-top: 15px; font-size: 14px;">
                     <strong>หมายเหตุ:</strong> การเปิดในเบราว์เซอร์ภายนอกจะช่วยให้ GPS ทำงานได้ถูกต้องและเร็วขึ้น
                 </p>
+                <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    📱 ต้องการความช่วยเหลือเพิ่มเติม?
+                </button>
+            </div>
+            
+            <!-- Help Popup Modal -->
+            <div id="helpPopup" class="help-popup">
+                <div class="help-popup-content">
+                    <button class="help-popup-close" onclick="closeHelpPopup()">×</button>
+                    <div id="helpPopupContent">
+                        <!-- Content will be inserted by JavaScript -->
+                    </div>
+                </div>
             </div>
             
             <?php if ($isAndroid): ?>
@@ -178,6 +259,12 @@ if ($isLineBrowser) {
                                 warningDiv.classList.add('show');
                                 warningShown = true;
                             }
+                            // Show help popup after 6 seconds if still stuck
+                            setTimeout(function() {
+                                if (isLineBrowser()) {
+                                    showHelpPopup();
+                                }
+                            }, 2000); // 2 more seconds = 6 total
                         }
                     }, 4000); // 4 seconds
                     
@@ -198,6 +285,9 @@ if ($isLineBrowser) {
                         หรือ:<br>
                         กดจุดสามจุด (⋮) มุมขวาบน → เลือก "เปิดในเบราว์เซอร์"
                     </p>
+                    <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        📱 ต้องการความช่วยเหลือเพิ่มเติม?
+                    </button>
                 </div>
                 
             <?php elseif ($isIOS): ?>
@@ -243,6 +333,12 @@ if ($isLineBrowser) {
                                 warningDiv.classList.add('show');
                                 warningShown = true;
                             }
+                            // Show help popup after 6 seconds if still stuck
+                            setTimeout(function() {
+                                if (isLineBrowser()) {
+                                    showHelpPopup();
+                                }
+                            }, 2000); // 2 more seconds = 6 total
                         }
                     }, 4000); // 4 seconds
                     
@@ -263,6 +359,9 @@ if ($isLineBrowser) {
                         หรือ:<br>
                         กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
                     </p>
+                    <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        📱 ต้องการความช่วยเหลือเพิ่มเติม?
+                    </button>
                 </div>
                 
             <?php else: ?>
@@ -284,6 +383,12 @@ if ($isLineBrowser) {
                                 warningDiv.classList.add('show');
                                 warningShown = true;
                             }
+                            // Show help popup after 6 seconds if still stuck
+                            setTimeout(function() {
+                                if (isLineBrowser()) {
+                                    showHelpPopup();
+                                }
+                            }, 2000);
                         }
                     }, 4000); // 4 seconds
                     
@@ -299,6 +404,80 @@ if ($isLineBrowser) {
                 </script>
                 <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดในเบราว์เซอร์</a>
             <?php endif; ?>
+            
+            <!-- Help Popup Functions -->
+            <script>
+                function detectDevice() {
+                    var ua = navigator.userAgent.toLowerCase();
+                    if (ua.indexOf('android') !== -1) return 'android';
+                    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+                    return 'other';
+                }
+                
+                function showHelpPopup() {
+                    var popup = document.getElementById('helpPopup');
+                    var content = document.getElementById('helpPopupContent');
+                    var device = detectDevice();
+                    
+                    var helpText = '';
+                    
+                    if (device === 'android') {
+                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (Android)</h3>' +
+                            '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
+                            '<ol>' +
+                            '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
+                            '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
+                            '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
+                            '<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                            '</ol>' +
+                            '<p style="margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 8px;">' +
+                            '<strong>💡 เคล็ดลับ:</strong><br>' +
+                            '• ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอขึ้นลง<br>' +
+                            '• บางครั้งเมนูอาจอยู่ที่มุมขวาล่าง<br>' +
+                            '• ตรวจสอบว่า Chrome ติดตั้งอยู่บนเครื่องของคุณ' +
+                            '</p>';
+                    } else if (device === 'ios') {
+                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iOS)</h3>' +
+                            '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
+                            '<ol>' +
+                            '<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
+                            '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>' +
+                            '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                            '</ol>' +
+                            '<p style="margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 8px;">' +
+                            '<strong>💡 เคล็ดลับ:</strong><br>' +
+                            '• ถ้าไม่เห็นไอคอน Share ให้ลองเลื่อนหน้าจอ<br>' +
+                            '• บางครั้งอาจต้องกดที่มุมขวาล่าง<br>' +
+                            '• ตรวจสอบว่า Safari เปิดใช้งานได้' +
+                            '</p>';
+                    } else {
+                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์</h3>' +
+                            '<p>กรุณาทำตามขั้นตอนนี้:</p>' +
+                            '<ol>' +
+                            '<li>กดเมนู (⋮) หรือ Share (□↑) ที่มุมขวาบน</li>' +
+                            '<li>เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"</li>' +
+                            '<li>เลือกเบราว์เซอร์ที่ต้องการ (Chrome, Safari, etc.)</li>' +
+                            '<li>อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                            '</ol>';
+                    }
+                    
+                    content.innerHTML = helpText;
+                    popup.classList.add('show');
+                }
+                
+                function closeHelpPopup() {
+                    var popup = document.getElementById('helpPopup');
+                    popup.classList.remove('show');
+                }
+                
+                // Close popup when clicking outside
+                document.addEventListener('click', function(e) {
+                    var popup = document.getElementById('helpPopup');
+                    if (e.target === popup) {
+                        closeHelpPopup();
+                    }
+                });
+            </script>
         </div>
     </body>
     </html>
