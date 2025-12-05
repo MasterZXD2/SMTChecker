@@ -38,20 +38,25 @@ if ($isLineBrowser) {
         <style>
             body {
                 font-family: 'Noto Sans Thai', sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: flex-start;
+                min-height: 100vh;
                 margin: 0;
                 padding: 20px;
                 background: #f5f5f5;
                 text-align: center;
-                min-height: 100vh;
+                overflow-y: auto;
             }
             .container {
                 background: white;
                 padding: 30px;
                 border-radius: 10px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                max-width: 500px;
-                margin: 20px auto;
+                max-width: 400px;
                 width: 100%;
+                margin: 20px auto;
             }
             .btn {
                 display: inline-block;
@@ -100,20 +105,14 @@ if ($isLineBrowser) {
                 border: 2px solid #f44336;
                 color: #c62828;
                 display: block !important;
-                position: relative;
-                z-index: 10;
-                margin-top: 30px;
-                margin-bottom: 30px;
+                margin-top: 25px;
+                animation: slideDown 0.5s ease-out;
             }
             #issueExplanation strong {
                 font-size: 20px;
                 display: block;
                 margin-bottom: 15px;
                 color: #c62828;
-            }
-            #issueExplanation.show {
-                display: block !important;
-                animation: slideDown 0.5s ease-out;
             }
             @keyframes slideDown {
                 from {
@@ -124,8 +123,22 @@ if ($isLineBrowser) {
                 to {
                     opacity: 1;
                     transform: translateY(0);
-                    max-height: 2000px;
+                    max-height: 1000px;
                 }
+            }
+            .scroll-hint {
+                text-align: center;
+                color: #666;
+                font-size: 14px;
+                margin-top: 15px;
+                padding: 10px;
+                background: #f0f0f0;
+                border-radius: 5px;
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.6; }
             }
             .status-update {
                 background: #e3f2fd;
@@ -152,10 +165,6 @@ if ($isLineBrowser) {
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes bounce {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(10px); }
             }
             .slow-load-warning strong {
                 display: block;
@@ -307,15 +316,10 @@ if ($isLineBrowser) {
                 </div>
             </div>
             
-            <!-- Scroll indicator (shows when content is below) -->
-            <div id="scrollIndicator" style="display: none; text-align: center; margin: 20px 0; color: #666; font-size: 14px;">
-                <p>👇 เลื่อนลงเพื่อดูวิธีแก้ไข</p>
-                <div style="animation: bounce 2s infinite; font-size: 24px;">⬇️</div>
+            <!-- Fallback section (will be shown if auto-redirect fails) -->
+            <div id="fallback" style="display: none; margin-top: 20px;">
+                <!-- Fallback content will be inserted by platform-specific scripts -->
             </div>
-            @keyframes bounce {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(10px); }
-            }
             
             <!-- Slow loading detection for LINE browser -->
             <div id="slowLoadWarning" class="slow-load-warning">
@@ -386,32 +390,24 @@ if ($isLineBrowser) {
                         
                         if (issueDiv && descDiv && stepsDiv) {
                             descDiv.innerHTML = description;
-                            stepsDiv.innerHTML = steps;
+                            stepsDiv.innerHTML = steps + '<div class="scroll-hint">📜 เลื่อนลงเพื่อดูขั้นตอนทั้งหมด</div>';
                             issueDiv.style.display = 'block';
-                            issueDiv.classList.add('show');
                             
-                            // Auto-scroll to the explanation after a brief delay
+                            // Scroll to explanation after a short delay
                             setTimeout(function() {
-                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             }, 100);
                             
-                            // Hide scroll indicator if it exists
-                            var scrollIndicator = document.getElementById('scrollIndicator');
-                            if (scrollIndicator) {
-                                scrollIndicator.style.display = 'none';
-                            }
-                        }
-                    }
-                    
-                    // Check if content is below viewport and show scroll indicator
-                    function checkScrollNeeded() {
-                        var issueDiv = document.getElementById('issueExplanation');
-                        if (issueDiv && issueDiv.style.display !== 'none') {
-                            var rect = issueDiv.getBoundingClientRect();
-                            var scrollIndicator = document.getElementById('scrollIndicator');
-                            if (rect.top > window.innerHeight && scrollIndicator) {
-                                scrollIndicator.style.display = 'block';
-                            }
+                            // Also scroll window if needed
+                            setTimeout(function() {
+                                var rect = issueDiv.getBoundingClientRect();
+                                if (rect.top < 100) {
+                                    window.scrollTo({
+                                        top: window.scrollY + rect.top - 100,
+                                        behavior: 'smooth'
+                                    });
+                                }
+                            }, 200);
                         }
                     }
                     
@@ -425,25 +421,21 @@ if ($isLineBrowser) {
                     // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback และอธิบายปัญหา
                     setTimeout(function() {
                         if (isLineBrowser()) {
-                            updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง 👇', 'warning');
+                            updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
                             document.getElementById('fallback').style.display = 'block';
                             
                             showIssueExplanation(
-                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'ระบบไม่สามารถเปิด Chrome อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
                                 '• LINE ไม่รองรับการเปิดเบราว์เซอร์อัตโนมัติ<br>' +
                                 '• Chrome ยังไม่ได้ตั้งเป็นเบราว์เซอร์เริ่มต้น<br>' +
                                 '• การตั้งค่าความปลอดภัยบล็อกการเปิดอัตโนมัติ',
-                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol style="font-size: 16px; line-height: 2;">' +
+                                '<strong>วิธีแก้ไข:</strong><ol>' +
                                 '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
                                 '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
-                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol>'
                             );
-                            
-                            // Check if scrolling is needed
-                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 2000);
                     
@@ -481,20 +473,17 @@ if ($isLineBrowser) {
                             
                             // Show detailed explanation
                             showIssueExplanation(
-                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
                                 '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
                                 '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
                                 '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol style="font-size: 16px; line-height: 2;">' +
+                                '<strong>วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol>' +
                                 '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
                                 '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
-                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอขึ้นลง หรือกดที่มุมขวาล่าง</p>'
                             );
-                            
-                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 60000); // 1 minute
                     
@@ -570,32 +559,24 @@ if ($isLineBrowser) {
                         
                         if (issueDiv && descDiv && stepsDiv) {
                             descDiv.innerHTML = description;
-                            stepsDiv.innerHTML = steps;
+                            stepsDiv.innerHTML = steps + '<div class="scroll-hint">📜 เลื่อนลงเพื่อดูขั้นตอนทั้งหมด</div>';
                             issueDiv.style.display = 'block';
-                            issueDiv.classList.add('show');
                             
-                            // Auto-scroll to the explanation after a brief delay
+                            // Scroll to explanation after a short delay
                             setTimeout(function() {
-                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                issueDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                             }, 100);
                             
-                            // Hide scroll indicator if it exists
-                            var scrollIndicator = document.getElementById('scrollIndicator');
-                            if (scrollIndicator) {
-                                scrollIndicator.style.display = 'none';
-                            }
-                        }
-                    }
-                    
-                    // Check if content is below viewport and show scroll indicator
-                    function checkScrollNeeded() {
-                        var issueDiv = document.getElementById('issueExplanation');
-                        if (issueDiv && issueDiv.style.display !== 'none') {
-                            var rect = issueDiv.getBoundingClientRect();
-                            var scrollIndicator = document.getElementById('scrollIndicator');
-                            if (rect.top > window.innerHeight && scrollIndicator) {
-                                scrollIndicator.style.display = 'block';
-                            }
+                            // Also scroll window if needed
+                            setTimeout(function() {
+                                var rect = issueDiv.getBoundingClientRect();
+                                if (rect.top < 100) {
+                                    window.scrollTo({
+                                        top: window.scrollY + rect.top - 100,
+                                        behavior: 'smooth'
+                                    });
+                                }
+                            }, 200);
                         }
                     }
                     
@@ -619,22 +600,19 @@ if ($isLineBrowser) {
                         var menuIcon = isIPad() ? 'จุดสามจุด (⋮)' : 'ไอคอน Share (□↑)';
                         
                         showIssueExplanation(
-                            '<strong>เกิดอะไรขึ้น?</strong><br>' +
                             'ระบบไม่สามารถเปิด Safari อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
                             '• Popup blocker ของ LINE บล็อกการเปิดเบราว์เซอร์<br>' +
                             '• การตั้งค่าความปลอดภัยของ LINE<br>' +
                             '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                            '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol style="font-size: 16px; line-height: 2;">' +
+                            '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
                             '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
                             (isIPad() ? 
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
                                 '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
                             ) +
-                            '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                            '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
                             '</ol>'
                         );
-                        
-                        setTimeout(checkScrollNeeded, 200);
                     } else {
                         // ถ้าเปิดสำเร็จ ให้ปิดหน้าปัจจุบันหลังจาก 1 วินาที
                         updateStatus('<strong>✅ เปิดใน Safari สำเร็จ!</strong><br>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา', 'success');
@@ -678,22 +656,19 @@ if ($isLineBrowser) {
                             
                             // Show detailed explanation
                             showIssueExplanation(
-                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
                                 '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
                                 '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
                                 '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
-                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol style="font-size: 16px; line-height: 2;">' +
+                                '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
                                 '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
                                 (isIPad() ? 
                                     '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
                                     '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
                                 ) +
-                                '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอ</p>'
                             );
-                            
-                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 60000); // 1 minute
                     
@@ -721,19 +696,18 @@ if ($isLineBrowser) {
                         }
                     }, 1000);
                 </script>
-                <div id="fallback" style="display: none;">
-                    <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
-                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer">เปิดใน Safari</a>
-                    <p class="info" style="font-size: 14px; margin-top: 15px;">
+                <div id="fallback" style="display: none; margin-top: 20px;">
+                    <p class="info" style="font-weight: bold; color: #333; margin-bottom: 15px;">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
+                    <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer" style="display: block; margin: 15px 0;">เปิดใน Safari</a>
+                    <p class="info" style="font-size: 14px; margin-top: 15px; padding: 10px; background: #f0f7ff; border-radius: 5px;">
+                        <strong>หรือทำตามขั้นตอนนี้:</strong><br>
                         <?php if ($isIPad): ?>
-                            หรือ:<br>
                             กดจุดสามจุด (⋮) มุมขวาล่าง → เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"
                         <?php else: ?>
-                            หรือ:<br>
                             กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
                         <?php endif; ?>
                     </p>
-                    <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%;">
                         📱 ต้องการความช่วยเหลือเพิ่มเติม?
                     </button>
                 </div>
