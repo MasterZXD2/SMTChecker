@@ -92,10 +92,38 @@ if ($isLineBrowser) {
                 background: #fff3cd;
                 border: 2px solid #ffc107;
                 border-radius: 8px;
-                padding: 20px;
+                padding: 25px;
                 margin: 20px 0;
                 color: #856404;
                 text-align: left;
+            }
+            #issueExplanation {
+                background: #ffe6e6;
+                border: 2px solid #f44336;
+                color: #c62828;
+            }
+            #issueExplanation strong {
+                font-size: 20px;
+                display: block;
+                margin-bottom: 15px;
+            }
+            .status-update {
+                background: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin: 15px 0;
+                border-radius: 5px;
+                color: #1565c0;
+            }
+            .status-update.warning {
+                background: #fff3e0;
+                border-left-color: #ff9800;
+                color: #e65100;
+            }
+            .status-update.error {
+                background: #ffebee;
+                border-left-color: #f44336;
+                color: #c62828;
             }
             .slow-load-warning.show {
                 display: block;
@@ -237,9 +265,22 @@ if ($isLineBrowser) {
         <div class="container">
             <h2>🔐 กำลังเปิดในเบราว์เซอร์ภายนอก...</h2>
             <div class="spinner"></div>
-            <div class="info">
-                <p>เพื่อให้สามารถใช้งาน GPS ได้อย่างถูกต้อง</p>
-                <p>กรุณาเปิดเว็บไซต์ในเบราว์เซอร์ภายนอก (Chrome/Safari)</p>
+            
+            <!-- Status Message -->
+            <div id="statusMessage" class="info">
+                <p><strong>กำลังพยายามเปิดเบราว์เซอร์อัตโนมัติ...</strong></p>
+                <p style="font-size: 14px; color: #999; margin-top: 10px;">กรุณารอสักครู่</p>
+            </div>
+            
+            <!-- Issue Explanation Box -->
+            <div id="issueExplanation" class="slow-load-warning" style="display: none;">
+                <strong>⚠️ เกิดปัญหาในการเปิดเบราว์เซอร์</strong>
+                <p id="issueDescription" style="margin: 15px 0; line-height: 1.8;">
+                    <!-- Issue description will be inserted by JavaScript -->
+                </p>
+                <div id="solutionSteps" style="margin-top: 20px;">
+                    <!-- Solution steps will be inserted by JavaScript -->
+                </div>
             </div>
             
             <!-- Slow loading detection for LINE browser -->
@@ -292,16 +333,56 @@ if ($isLineBrowser) {
                     
                     var redirectAttempted = false;
                     var warningShown = false;
+                    var statusUpdated = false;
+                    
+                    // Update status message
+                    function updateStatus(message, type) {
+                        var statusDiv = document.getElementById('statusMessage');
+                        if (statusDiv) {
+                            statusDiv.innerHTML = '<div class="status-update ' + (type || '') + '">' + message + '</div>';
+                            statusUpdated = true;
+                        }
+                    }
+                    
+                    // Show issue explanation
+                    function showIssueExplanation(description, steps) {
+                        var issueDiv = document.getElementById('issueExplanation');
+                        var descDiv = document.getElementById('issueDescription');
+                        var stepsDiv = document.getElementById('solutionSteps');
+                        
+                        if (issueDiv && descDiv && stepsDiv) {
+                            descDiv.innerHTML = description;
+                            stepsDiv.innerHTML = steps;
+                            issueDiv.style.display = 'block';
+                        }
+                    }
                     
                     // ลองเปิดด้วย Intent
                     setTimeout(function() {
                         redirectAttempted = true;
+                        updateStatus('<strong>⏳ กำลังเปิด Chrome...</strong><br>กรุณารอสักครู่', '');
                         window.location.href = intentUrl;
                     }, 300);
                     
-                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback
+                    // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback และอธิบายปัญหา
                     setTimeout(function() {
-                        document.getElementById('fallback').style.display = 'block';
+                        if (isLineBrowser()) {
+                            updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
+                            document.getElementById('fallback').style.display = 'block';
+                            
+                            showIssueExplanation(
+                                'ระบบไม่สามารถเปิด Chrome อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
+                                '• LINE ไม่รองรับการเปิดเบราว์เซอร์อัตโนมัติ<br>' +
+                                '• Chrome ยังไม่ได้ตั้งเป็นเบราว์เซอร์เริ่มต้น<br>' +
+                                '• การตั้งค่าความปลอดภัยบล็อกการเปิดอัตโนมัติ',
+                                '<strong>วิธีแก้ไข:</strong><ol>' +
+                                '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
+                                '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
+                                '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '</ol>'
+                            );
+                        }
                     }, 2000);
                     
                     var toastShown = false;
@@ -311,6 +392,8 @@ if ($isLineBrowser) {
                     setTimeout(function() {
                         // ถ้ายังอยู่ใน LINE browser และยังไม่ได้ redirect สำเร็จ
                         if (isLineBrowser() && redirectAttempted && !warningShown) {
+                            updateStatus('<strong>⏱️ ใช้เวลานานกว่าปกติ</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
+                            
                             var warningDiv = document.getElementById('slowLoadWarning');
                             if (warningDiv && document.body) {
                                 warningDiv.classList.add('show');
@@ -325,19 +408,35 @@ if ($isLineBrowser) {
                         }
                     }, 4000); // 4 seconds
                     
-                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification
+                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification and update status
                     setTimeout(function() {
                         if (isLineBrowser() && redirectAttempted && !toastShown) {
+                            updateStatus('<strong>⚠️ ใช้เวลานานมาก</strong><br>กรุณาทำตามขั้นตอนด้านล่างเพื่อเปิดเบราว์เซอร์ด้วยตนเอง', 'error');
                             showToast('⚠️ การเปิดเบราว์เซอร์ใช้เวลานาน', 
-                                'กรุณากดจุดสามจุด (⋮) → เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"', 
+                                'กรุณากดจุดสามจุด (⋮) → เลือก "เปิดในเบราว์เซอร์" → เลือก Chrome', 
                                 'warning');
                             toastShown = true;
+                            
+                            // Show detailed explanation
+                            showIssueExplanation(
+                                'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
+                                '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
+                                '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
+                                '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
+                                '<strong>วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol>' +
+                                '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
+                                '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
+                                '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอขึ้นลง หรือกดที่มุมขวาล่าง</p>'
+                            );
                         }
                     }, 60000); // 1 minute
                     
                     // Check again at 2 minutes
                     setTimeout(function() {
                         if (isLineBrowser() && redirectAttempted) {
+                            updateStatus('<strong>❌ ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'error');
                             showToast('⚠️ ยังไม่สามารถเปิดเบราว์เซอร์ได้', 
                                 'กรุณาทำตามขั้นตอน: กดจุดสามจุด (⋮) → "เปิดในเบราว์เซอร์" → เลือก Chrome', 
                                 'error');
@@ -390,19 +489,63 @@ if ($isLineBrowser) {
                     var toastShown = false;
                     var startTime = Date.now();
                     
+                    // Update status message
+                    function updateStatus(message, type) {
+                        var statusDiv = document.getElementById('statusMessage');
+                        if (statusDiv) {
+                            statusDiv.innerHTML = '<div class="status-update ' + (type || '') + '">' + message + '</div>';
+                        }
+                    }
+                    
+                    // Show issue explanation
+                    function showIssueExplanation(description, steps) {
+                        var issueDiv = document.getElementById('issueExplanation');
+                        var descDiv = document.getElementById('issueDescription');
+                        var stepsDiv = document.getElementById('solutionSteps');
+                        
+                        if (issueDiv && descDiv && stepsDiv) {
+                            descDiv.innerHTML = description;
+                            stepsDiv.innerHTML = steps;
+                            issueDiv.style.display = 'block';
+                        }
+                    }
+                    
                     // พยายามเปิดใน Safari
                     try {
+                        updateStatus('<strong>⏳ กำลังเปิด Safari...</strong><br>กรุณารอสักครู่', '');
                         opened = window.open('<?php echo $redirectUrl; ?>', '_blank');
                         redirectAttempted = true;
                     } catch(e) {
                         redirectAttempted = true;
+                        updateStatus('<strong>⚠️ เกิดข้อผิดพลาด</strong><br>ไม่สามารถเปิด Safari อัตโนมัติได้', 'warning');
                     }
                     
                     if (!opened || opened.closed || typeof opened.closed == 'undefined') {
-                        // ถ้า popup ถูกบล็อก ให้แสดงปุ่ม
+                        // ถ้า popup ถูกบล็อก ให้แสดงปุ่มและอธิบายปัญหา
+                        updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
                         document.getElementById('fallback').style.display = 'block';
+                        
+                        var deviceType = isIPad() ? 'iPad' : 'iPhone';
+                        var menuLocation = isIPad() ? 'มุมขวาล่าง' : 'มุมขวาบน';
+                        var menuIcon = isIPad() ? 'จุดสามจุด (⋮)' : 'ไอคอน Share (□↑)';
+                        
+                        showIssueExplanation(
+                            'ระบบไม่สามารถเปิด Safari อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
+                            '• Popup blocker ของ LINE บล็อกการเปิดเบราว์เซอร์<br>' +
+                            '• การตั้งค่าความปลอดภัยของ LINE<br>' +
+                            '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
+                            '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
+                            '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
+                            (isIPad() ? 
+                                '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
+                                '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
+                            ) +
+                            '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                            '</ol>'
+                        );
                     } else {
                         // ถ้าเปิดสำเร็จ ให้ปิดหน้าปัจจุบันหลังจาก 1 วินาที
+                        updateStatus('<strong>✅ เปิดใน Safari สำเร็จ!</strong><br>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา', 'success');
                         setTimeout(function() {
                             document.body.innerHTML = '<div class="container"><h2>✅ เปิดใน Safari แล้ว</h2><p>กรุณาใช้งานในหน้าต่าง Safari ที่เปิดขึ้นมา</p></div>';
                         }, 1000);
@@ -412,6 +555,8 @@ if ($isLineBrowser) {
                     setTimeout(function() {
                         // ถ้ายังอยู่ใน LINE browser และยังไม่ได้ redirect สำเร็จ
                         if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined') && !warningShown) {
+                            updateStatus('<strong>⏱️ ใช้เวลานานกว่าปกติ</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
+                            
                             var warningDiv = document.getElementById('slowLoadWarning');
                             if (warningDiv && document.body) {
                                 warningDiv.classList.add('show');
@@ -426,14 +571,34 @@ if ($isLineBrowser) {
                         }
                     }, 4000); // 4 seconds
                     
-                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification
+                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification and update status
                     setTimeout(function() {
                         if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined') && !toastShown) {
                             var deviceType = isIPad() ? 'iPad' : 'iPhone';
+                            var menuLocation = isIPad() ? 'มุมขวาล่าง' : 'มุมขวาบน';
+                            var menuIcon = isIPad() ? 'จุดสามจุด (⋮)' : 'ไอคอน Share (□↑)';
+                            
+                            updateStatus('<strong>⚠️ ใช้เวลานานมาก</strong><br>กรุณาทำตามขั้นตอนด้านล่างเพื่อเปิดเบราว์เซอร์ด้วยตนเอง', 'error');
                             showToast('⚠️ การเปิดเบราว์เซอร์ใช้เวลานาน', 
-                                'กรุณากดจุดสามจุด (⋮) → เลือก "เปิดในเบราว์เซอร์" ที่มุมขวาล่าง', 
+                                'กรุณากด' + menuIcon + ' → เลือก "เปิดในเบราว์เซอร์" ที่' + menuLocation, 
                                 'warning');
                             toastShown = true;
+                            
+                            // Show detailed explanation
+                            showIssueExplanation(
+                                'การเปิดเบราว์เซอร์ใช้เวลานานมาก อาจเป็นเพราะ:<br>' +
+                                '• การเชื่อมต่ออินเทอร์เน็ตช้า<br>' +
+                                '• LINE ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้<br>' +
+                                '• จำเป็นต้องเปิดเบราว์เซอร์ด้วยตนเอง',
+                                '<strong>วิธีแก้ไขสำหรับ ' + deviceType + ':</strong><ol>' +
+                                '<li><strong>กด' + menuIcon + '</strong> ที่' + menuLocation + 'ของหน้าจอ LINE</li>' +
+                                (isIPad() ? 
+                                    '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' :
+                                    '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>'
+                                ) +
+                                '<li>เมื่อ Safari เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '</ol><p style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 5px;"><strong>💡 เคล็ดลับ:</strong> ถ้าไม่เห็นเมนู ให้ลองเลื่อนหน้าจอ</p>'
+                            );
                         }
                     }, 60000); // 1 minute
                     
@@ -441,8 +606,12 @@ if ($isLineBrowser) {
                     setTimeout(function() {
                         if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined')) {
                             var deviceType = isIPad() ? 'iPad' : 'iPhone';
+                            var menuLocation = isIPad() ? 'มุมขวาล่าง' : 'มุมขวาบน';
+                            var menuIcon = isIPad() ? 'จุดสามจุด (⋮)' : 'ไอคอน Share (□↑)';
+                            
+                            updateStatus('<strong>❌ ไม่สามารถเปิดเบราว์เซอร์อัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'error');
                             showToast('⚠️ ยังไม่สามารถเปิดเบราว์เซอร์ได้', 
-                                'กรุณาทำตามขั้นตอน: กดจุดสามจุด (⋮) → "เปิดในเบราว์เซอร์" (มุมขวาล่าง)', 
+                                'กรุณาทำตามขั้นตอน: กด' + menuIcon + ' → "เปิดในเบราว์เซอร์" (' + menuLocation + ')', 
                                 'error');
                         }
                     }, 120000); // 2 minutes
