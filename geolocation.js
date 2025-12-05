@@ -69,9 +69,14 @@
             return;
         }
         
-        // ตรวจสอบว่าเป็น LINE browser และแจ้งเตือน
+        // ตรวจสอบว่าเป็น LINE browser และแจ้งเตือน (UI notification will be shown by calling page)
         if (isLineBrowser()) {
-            console.warn('⚠️ ตรวจพบ LINE Browser - GPS อาจไม่ทำงาน กรุณาเปิดในเบราว์เซอร์ภายนอก');
+            // Trigger custom event for UI notification
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('lineBrowserDetected', {
+                    detail: { message: '⚠️ ตรวจพบ LINE Browser - GPS อาจไม่ทำงาน กรุณาเปิดในเบราว์เซอร์ภายนอก' }
+                }));
+            }
         }
         
         // Android-specific settings
@@ -95,7 +100,7 @@
         function tryWatchPosition() {
             if (watchId !== null) return; // Already watching
             
-            console.log('🔄 Trying watchPosition as fallback...');
+            // Silent retry - no console log
             watchId = navigator.geolocation.watchPosition(
                 function(position) {
                     // Success! Clear watch and call success callback
@@ -131,7 +136,7 @@
             const attemptOptions = Object.assign({}, finalOptions);
             if (!useHighAccuracy) {
                 attemptOptions.enableHighAccuracy = false;
-                console.log('🔄 Trying with lower accuracy...');
+                // Silent retry with lower accuracy
             }
             
             navigator.geolocation.getCurrentPosition(
@@ -180,7 +185,7 @@
             // Normal retry logic
             if (attempts < maxAttempts) {
                 const delay = isAndroid() ? 3000 : 2000; // Longer delay for Android
-                console.log(`🔄 Retrying geolocation... (${attempts}/${maxAttempts})`);
+                // Silent retry - no console log
                 setTimeout(function() {
                     attemptGetPosition(useHighAccuracy);
                 }, delay);
@@ -219,7 +224,12 @@
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && watchId === null && attempts < maxAttempts) {
                 // Page became visible again, might be in external browser now
-                console.log('📱 Page visible again, retrying geolocation...');
+                // Trigger custom event for UI notification instead of console log
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                    window.dispatchEvent(new CustomEvent('geolocationRetry', {
+                        detail: { message: '📱 กำลังลองขอตำแหน่งอีกครั้ง...' }
+                    }));
+                }
                 setTimeout(function() {
                     if (!window.gpsReady) {
                         attemptGetPosition();
@@ -301,7 +311,7 @@
                 return data.display_name || 'ไม่ทราบชื่อสถานที่';
             })
             .catch(error => {
-                console.error('Reverse geocoding error:', error);
+                // Silent error - return default location name
                 return 'ไม่ทราบชื่อสถานที่';
             });
     }

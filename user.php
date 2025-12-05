@@ -82,10 +82,40 @@ $_SESSION['date'] = $_SESSION['user'][1];
         // Handle page visibility change (user switched to external browser)
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && !gpsReady && !isRequesting) {
-                console.log('📱 Page became visible, retrying geolocation...');
+                // Show UI notification instead of console log
+                showNotification('📱 กำลังลองขอตำแหน่งอีกครั้ง...', 'info');
                 setTimeout(requestLocation, 1000);
             }
         });
+        
+        // Notification function
+        function showNotification(message, type) {
+            // Create or get notification element
+            let notification = document.getElementById('gpsNotification');
+            if (!notification) {
+                notification = document.createElement('div');
+                notification.id = 'gpsNotification';
+                notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #333; color: white; padding: 15px 20px; border-radius: 8px; z-index: 10000; max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s;';
+                document.body.appendChild(notification);
+            }
+            
+            if (type === 'error') notification.style.background = '#f44336';
+            else if (type === 'success') notification.style.background = '#4caf50';
+            else if (type === 'warning') notification.style.background = '#ff9800';
+            else notification.style.background = '#2196f3';
+            
+            notification.textContent = message;
+            notification.style.opacity = '1';
+            
+            setTimeout(function() {
+                notification.style.opacity = '0';
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
 
         function requestLocation() {
             if (isRequesting) return;
@@ -122,13 +152,8 @@ $_SESSION['date'] = $_SESSION['user'][1];
                     gpsReady = true;
                     window.gpsReady = true; // Set global flag
                     
-                    // แสดงสถานะสำเร็จ (optional)
-                    console.log('✅ GPS location obtained:', lat, lon, locationName);
-                    
-                    // Android-specific: Show success message briefly
-                    if (window.GeolocationUtil.isAndroid()) {
-                        console.log('✅ Android GPS location successfully retrieved');
-                    }
+                    // Show success notification
+                    showNotification('✅ ได้รับตำแหน่ง GPS เรียบร้อย', 'success');
                 })
                 .catch(error => {
                     // แม้ reverse geocode จะล้มเหลว แต่เรายังมี coordinates
@@ -136,14 +161,24 @@ $_SESSION['date'] = $_SESSION['user'][1];
                     document.getElementById("placeField").value = "ไม่ทราบชื่อสถานที่";
                     gpsReady = true;
                     window.gpsReady = true; // Set global flag
-                    console.warn('⚠️ Reverse geocoding failed, but coordinates saved:', error);
+                    // Coordinates saved even if reverse geocoding failed
+                    showNotification('⚠️ บันทึกตำแหน่งแล้ว แต่ไม่สามารถแปลงเป็นชื่อสถานที่ได้', 'warning');
                 });
         }
 
         function errorCallback(error) {
             isRequesting = false;
             gpsError = window.GeolocationUtil.getErrorMessage(error);
-            console.error('❌ Geolocation error:', error);
+            // Show error notification
+            let errorMsg = '❌ ไม่สามารถรับตำแหน่ง GPS ได้';
+            if (error.code === 1 || error.code === error.PERMISSION_DENIED) {
+                errorMsg = '❌ ถูกปฏิเสธการเข้าถึงตำแหน่ง';
+            } else if (error.code === 2 || error.code === error.POSITION_UNAVAILABLE) {
+                errorMsg = '❌ ไม่สามารถระบุตำแหน่งได้';
+            } else if (error.code === 3 || error.code === error.TIMEOUT) {
+                errorMsg = '⏱️ หมดเวลาในการขอตำแหน่ง';
+            }
+            showNotification(errorMsg, 'error');
         }
 
         // ฟังก์ชันที่ทำงานก่อนส่งฟอร์ม

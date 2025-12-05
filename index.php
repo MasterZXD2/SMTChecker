@@ -21,11 +21,12 @@ if ($isLineBrowser) {
     $baseUrl = "https://smtchecker.onrender.com";
     $redirectUrl = $baseUrl . "/index.php?token=" . urlencode($token);
     
-    // ตรวจสอบว่าเป็น Android, iPhone, หรือ iPad
+    // ตรวจสอบว่าเป็น Android, iOS, หรือ iPad
     $isAndroid = (strpos($userAgent, "android") !== false);
     $isIPad = (strpos($userAgent, "ipad") !== false);
-    $isIPhone = (strpos($userAgent, "iphone") !== false || strpos($userAgent, "ipod") !== false);
-    $isIOS = $isIPad || $isIPhone;
+    $isIPhone = (strpos($userAgent, "iphone") !== false);
+    $isIPod = (strpos($userAgent, "ipod") !== false);
+    $isIOS = $isIPhone || $isIPad || $isIPod;
     
     ?>
     <!DOCTYPE html>
@@ -117,32 +118,6 @@ if ($isLineBrowser) {
                 margin: 8px 0;
                 line-height: 1.6;
             }
-            .timeout-message {
-                display: none;
-                background: #ffebee;
-                border: 2px solid #f44336;
-                border-radius: 10px;
-                padding: 25px;
-                margin: 20px 0;
-                text-align: left;
-            }
-            .timeout-message.show {
-                display: block;
-                animation: fadeIn 0.3s ease-in;
-            }
-            .timeout-message h3 {
-                color: #c62828;
-                margin-top: 0;
-                font-size: 20px;
-            }
-            .timeout-message ol {
-                margin: 15px 0;
-                padding-left: 25px;
-            }
-            .timeout-message li {
-                margin: 10px 0;
-                line-height: 1.8;
-            }
             /* Help Popup Modal */
             .help-popup {
                 display: none;
@@ -211,6 +186,51 @@ if ($isLineBrowser) {
                 margin-top: 20px;
                 font-weight: bold;
             }
+            /* Toast Notification */
+            .toast {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%) translateY(100px);
+                background: #333;
+                color: white;
+                padding: 20px 30px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                z-index: 10001;
+                max-width: 90%;
+                text-align: center;
+                opacity: 0;
+                transition: all 0.3s ease;
+                font-size: 16px;
+            }
+            .toast.show {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+            .toast.warning {
+                background: #ff9800;
+            }
+            .toast.error {
+                background: #f44336;
+            }
+            .toast.success {
+                background: #4caf50;
+            }
+            .toast-close {
+                position: absolute;
+                top: 5px;
+                right: 10px;
+                background: transparent;
+                border: none;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+                line-height: 1;
+            }
+            .toast-content {
+                padding-right: 30px;
+            }
         </style>
     </head>
     <body>
@@ -220,19 +240,6 @@ if ($isLineBrowser) {
             <div class="info">
                 <p>เพื่อให้สามารถใช้งาน GPS ได้อย่างถูกต้อง</p>
                 <p>กรุณาเปิดเว็บไซต์ในเบราว์เซอร์ภายนอก (Chrome/Safari)</p>
-            </div>
-            
-            <!-- Timeout message (after 1-2 minutes) -->
-            <div id="timeoutMessage" class="timeout-message">
-                <h3>⏱️ การเปิดเบราว์เซอร์ใช้เวลานานเกินไป</h3>
-                <p>กรุณาทำตามขั้นตอนด้านล่างเพื่อเปิดในเบราว์เซอร์ภายนอกด้วยตนเอง:</p>
-                <ol id="timeoutSteps">
-                    <!-- Steps will be inserted by JavaScript -->
-                </ol>
-                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
-                    <strong>🔗 ลิงก์สำหรับเปิด:</strong><br>
-                    <a href="<?php echo $redirectUrl; ?>" id="timeoutLink" target="_blank" style="color: #007aff; word-break: break-all; font-size: 14px;"><?php echo htmlspecialchars($redirectUrl); ?></a>
-                </div>
             </div>
             
             <!-- Slow loading detection for LINE browser -->
@@ -260,6 +267,12 @@ if ($isLineBrowser) {
                         <!-- Content will be inserted by JavaScript -->
                     </div>
                 </div>
+            </div>
+            
+            <!-- Toast Notification -->
+            <div id="toast" class="toast">
+                <button class="toast-close" onclick="closeToast()">×</button>
+                <div class="toast-content" id="toastContent"></div>
             </div>
             
             <?php if ($isAndroid): ?>
@@ -291,6 +304,9 @@ if ($isLineBrowser) {
                         document.getElementById('fallback').style.display = 'block';
                     }, 2000);
                     
+                    var toastShown = false;
+                    var startTime = Date.now();
+                    
                     // ตรวจสอบ slow loading (4 วินาที)
                     setTimeout(function() {
                         // ถ้ายังอยู่ใน LINE browser และยังไม่ได้ redirect สำเร็จ
@@ -308,6 +324,25 @@ if ($isLineBrowser) {
                             }, 2000); // 2 more seconds = 6 total
                         }
                     }, 4000); // 4 seconds
+                    
+                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification
+                    setTimeout(function() {
+                        if (isLineBrowser() && redirectAttempted && !toastShown) {
+                            showToast('⚠️ การเปิดเบราว์เซอร์ใช้เวลานาน', 
+                                'กรุณากดจุดสามจุด (⋮) → เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"', 
+                                'warning');
+                            toastShown = true;
+                        }
+                    }, 60000); // 1 minute
+                    
+                    // Check again at 2 minutes
+                    setTimeout(function() {
+                        if (isLineBrowser() && redirectAttempted) {
+                            showToast('⚠️ ยังไม่สามารถเปิดเบราว์เซอร์ได้', 
+                                'กรุณาทำตามขั้นตอน: กดจุดสามจุด (⋮) → "เปิดในเบราว์เซอร์" → เลือก Chrome', 
+                                'error');
+                        }
+                    }, 120000); // 2 minutes
                     
                     // ตรวจสอบเป็นระยะว่ายังอยู่ใน LINE browser หรือไม่ (ถ้าไม่ใช่ ให้ซ่อน warning)
                     setInterval(function() {
@@ -332,12 +367,18 @@ if ($isLineBrowser) {
                 </div>
                 
             <?php elseif ($isIOS): ?>
-                <!-- iOS: ใช้ window.open และ fallback -->
+                <!-- iOS/iPadOS: ใช้ window.open และ fallback -->
                 <script>
                     // ฟังก์ชันตรวจสอบว่าเป็น LINE browser หรือไม่
                     function isLineBrowser() {
                         var ua = navigator.userAgent.toLowerCase();
                         return ua.indexOf('line') !== -1;
+                    }
+                    
+                    // ตรวจสอบว่าเป็น iPad หรือไม่
+                    function isIPad() {
+                        var ua = navigator.userAgent.toLowerCase();
+                        return ua.indexOf('ipad') !== -1 || (ua.indexOf('macintosh') !== -1 && 'ontouchend' in document);
                     }
                     
                     // เก็บ token ใน localStorage
@@ -346,6 +387,8 @@ if ($isLineBrowser) {
                     var redirectAttempted = false;
                     var opened = null;
                     var warningShown = false;
+                    var toastShown = false;
+                    var startTime = Date.now();
                     
                     // พยายามเปิดใน Safari
                     try {
@@ -383,6 +426,27 @@ if ($isLineBrowser) {
                         }
                     }, 4000); // 4 seconds
                     
+                    // ตรวจสอบ long loading (1-2 minutes) - Show toast notification
+                    setTimeout(function() {
+                        if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined') && !toastShown) {
+                            var deviceType = isIPad() ? 'iPad' : 'iPhone';
+                            showToast('⚠️ การเปิดเบราว์เซอร์ใช้เวลานาน', 
+                                'กรุณากดจุดสามจุด (⋮) → เลือก "เปิดในเบราว์เซอร์" ที่มุมขวาล่าง', 
+                                'warning');
+                            toastShown = true;
+                        }
+                    }, 60000); // 1 minute
+                    
+                    // Check again at 2 minutes
+                    setTimeout(function() {
+                        if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined')) {
+                            var deviceType = isIPad() ? 'iPad' : 'iPhone';
+                            showToast('⚠️ ยังไม่สามารถเปิดเบราว์เซอร์ได้', 
+                                'กรุณาทำตามขั้นตอน: กดจุดสามจุด (⋮) → "เปิดในเบราว์เซอร์" (มุมขวาล่าง)', 
+                                'error');
+                        }
+                    }, 120000); // 2 minutes
+                    
                     // ตรวจสอบเป็นระยะว่ายังอยู่ใน LINE browser หรือไม่ (ถ้าไม่ใช่ ให้ซ่อน warning)
                     setInterval(function() {
                         if (!isLineBrowser() && warningShown) {
@@ -392,20 +456,18 @@ if ($isLineBrowser) {
                             }
                         }
                     }, 1000);
-                    
-                    // Show timeout message after 90 seconds (1.5 minutes)
-                    setTimeout(function() {
-                        if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined')) {
-                            showTimeoutMessage();
-                        }
-                    }, 90000); // 90 seconds = 1.5 minutes
                 </script>
                 <div id="fallback" style="display: none;">
                     <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
                     <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank" rel="noopener noreferrer">เปิดใน Safari</a>
                     <p class="info" style="font-size: 14px; margin-top: 15px;">
-                        หรือ:<br>
-                        กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
+                        <?php if ($isIPad): ?>
+                            หรือ:<br>
+                            กดจุดสามจุด (⋮) มุมขวาล่าง → เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"
+                        <?php else: ?>
+                            หรือ:<br>
+                            กดไอคอน Share (□↑) → เลือก "Safari" หรือ "เปิดในเบราว์เซอร์"
+                        <?php endif; ?>
                     </p>
                     <button onclick="showHelpPopup()" style="margin-top: 15px; padding: 10px 20px; background: #007aff; color: white; border: none; border-radius: 5px; cursor: pointer;">
                         📱 ต้องการความช่วยเหลือเพิ่มเติม?
@@ -449,13 +511,6 @@ if ($isLineBrowser) {
                             }
                         }
                     }, 1000);
-                    
-                    // Show timeout message after 90 seconds (1.5 minutes)
-                    setTimeout(function() {
-                        if (isLineBrowser()) {
-                            showTimeoutMessage();
-                        }
-                    }, 90000); // 90 seconds = 1.5 minutes
                 </script>
                 <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดในเบราว์เซอร์</a>
             <?php endif; ?>
@@ -465,45 +520,35 @@ if ($isLineBrowser) {
                 function detectDevice() {
                     var ua = navigator.userAgent.toLowerCase();
                     if (ua.indexOf('android') !== -1) return 'android';
-                    if (ua.indexOf('ipad') !== -1) return 'ipad';
-                    if (/iphone|ipod/.test(ua)) return 'iphone';
+                    if (ua.indexOf('ipad') !== -1 || (ua.indexOf('macintosh') !== -1 && 'ontouchend' in document)) return 'ipad';
+                    if (/iphone|ipod/.test(ua)) return 'ios';
                     return 'other';
                 }
                 
-                function showTimeoutMessage() {
-                    var timeoutDiv = document.getElementById('timeoutMessage');
-                    var timeoutSteps = document.getElementById('timeoutSteps');
-                    var device = detectDevice();
+                function isIPad() {
+                    var ua = navigator.userAgent.toLowerCase();
+                    return ua.indexOf('ipad') !== -1 || (ua.indexOf('macintosh') !== -1 && 'ontouchend' in document);
+                }
+                
+                // Toast notification functions
+                function showToast(title, message, type) {
+                    var toast = document.getElementById('toast');
+                    var content = document.getElementById('toastContent');
                     
-                    if (!timeoutDiv || !timeoutSteps) return;
+                    toast.className = 'toast ' + (type || '');
+                    content.innerHTML = '<strong>' + title + '</strong><br>' + message;
                     
-                    var steps = [];
+                    toast.classList.add('show');
                     
-                    if (device === 'ipad') {
-                        steps.push('<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
-                        steps.push('<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>');
-                        steps.push('<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
-                        steps.push('<li>หรือ <strong>คัดลอกลิงก์ด้านล่าง</strong> แล้วเปิดใน Safari</li>');
-                    } else if (device === 'iphone') {
-                        steps.push('<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
-                        steps.push('<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>');
-                        steps.push('<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
-                    } else if (device === 'android') {
-                        steps.push('<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
-                        steps.push('<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>');
-                        steps.push('<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>');
-                        steps.push('<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
-                    } else {
-                        steps.push('<li>กดเมนู (⋮) หรือ Share (□↑) ที่มุมขวาบน</li>');
-                        steps.push('<li>เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"</li>');
-                        steps.push('<li>เลือกเบราว์เซอร์ที่ต้องการ</li>');
-                    }
-                    
-                    timeoutSteps.innerHTML = steps.join('');
-                    timeoutDiv.classList.add('show');
-                    
-                    // Scroll to timeout message
-                    timeoutDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Auto-hide after 10 seconds
+                    setTimeout(function() {
+                        closeToast();
+                    }, 10000);
+                }
+                
+                function closeToast() {
+                    var toast = document.getElementById('toast');
+                    toast.classList.remove('show');
                 }
                 
                 function showHelpPopup() {
@@ -532,19 +577,19 @@ if ($isLineBrowser) {
                         helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iPad)</h3>' +
                             '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
                             '<ol>' +
-                            '<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
-                            '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>' +
+                            '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาล่างของหน้าจอ LINE</li>' +
+                            '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
+                            '<li>เลือก <strong>Safari</strong> หรือเบราว์เซอร์ที่ต้องการ</li>' +
                             '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
-                            '<li>หรือ <strong>คัดลอกลิงก์</strong> แล้วเปิดใน Safari ด้วยตนเอง</li>' +
                             '</ol>' +
                             '<p style="margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 8px;">' +
                             '<strong>💡 เคล็ดลับสำหรับ iPad:</strong><br>' +
-                            '• ถ้าไม่เห็นไอคอน Share ให้ลองเลื่อนหน้าจอ<br>' +
-                            '• บน iPad อาจต้องกดที่มุมขวาบนหรือขวาล่าง<br>' +
+                            '• เมนูมักอยู่ที่มุมขวาล่างของหน้าจอ<br>' +
+                            '• บางครั้งอาจต้องกดที่แถบด้านล่างของ LINE<br>' +
                             '• ตรวจสอบว่า Safari เปิดใช้งานได้<br>' +
-                            '• บน iPad สามารถใช้ Safari ได้ทั้งในโหมด portrait และ landscape' +
+                            '• iPad รองรับทั้งโหมดแนวนอนและแนวตั้ง' +
                             '</p>';
-                    } else if (device === 'iphone') {
+                    } else if (device === 'ios') {
                         helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iPhone)</h3>' +
                             '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
                             '<ol>' +
