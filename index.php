@@ -16,14 +16,16 @@ if ($isLineBrowser) {
     if (!isset($_SESSION['access_token'])) {
         $_SESSION['access_token'] = generateToken();
     }
-    
+
     $token = $_SESSION['access_token'];
     $baseUrl = "https://smtchecker.onrender.com";
     $redirectUrl = $baseUrl . "/index.php?token=" . urlencode($token);
     
-    // ตรวจสอบว่าเป็น Android หรือ iOS
+    // ตรวจสอบว่าเป็น Android, iPhone, หรือ iPad
     $isAndroid = (strpos($userAgent, "android") !== false);
-    $isIOS = (strpos($userAgent, "iphone") !== false || strpos($userAgent, "ipad") !== false || strpos($userAgent, "ipod") !== false);
+    $isIPad = (strpos($userAgent, "ipad") !== false);
+    $isIPhone = (strpos($userAgent, "iphone") !== false || strpos($userAgent, "ipod") !== false);
+    $isIOS = $isIPad || $isIPhone;
     
     ?>
     <!DOCTYPE html>
@@ -115,6 +117,32 @@ if ($isLineBrowser) {
                 margin: 8px 0;
                 line-height: 1.6;
             }
+            .timeout-message {
+                display: none;
+                background: #ffebee;
+                border: 2px solid #f44336;
+                border-radius: 10px;
+                padding: 25px;
+                margin: 20px 0;
+                text-align: left;
+            }
+            .timeout-message.show {
+                display: block;
+                animation: fadeIn 0.3s ease-in;
+            }
+            .timeout-message h3 {
+                color: #c62828;
+                margin-top: 0;
+                font-size: 20px;
+            }
+            .timeout-message ol {
+                margin: 15px 0;
+                padding-left: 25px;
+            }
+            .timeout-message li {
+                margin: 10px 0;
+                line-height: 1.8;
+            }
             /* Help Popup Modal */
             .help-popup {
                 display: none;
@@ -192,6 +220,19 @@ if ($isLineBrowser) {
             <div class="info">
                 <p>เพื่อให้สามารถใช้งาน GPS ได้อย่างถูกต้อง</p>
                 <p>กรุณาเปิดเว็บไซต์ในเบราว์เซอร์ภายนอก (Chrome/Safari)</p>
+            </div>
+            
+            <!-- Timeout message (after 1-2 minutes) -->
+            <div id="timeoutMessage" class="timeout-message">
+                <h3>⏱️ การเปิดเบราว์เซอร์ใช้เวลานานเกินไป</h3>
+                <p>กรุณาทำตามขั้นตอนด้านล่างเพื่อเปิดในเบราว์เซอร์ภายนอกด้วยตนเอง:</p>
+                <ol id="timeoutSteps">
+                    <!-- Steps will be inserted by JavaScript -->
+                </ol>
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                    <strong>🔗 ลิงก์สำหรับเปิด:</strong><br>
+                    <a href="<?php echo $redirectUrl; ?>" id="timeoutLink" target="_blank" style="color: #007aff; word-break: break-all; font-size: 14px;"><?php echo htmlspecialchars($redirectUrl); ?></a>
+                </div>
             </div>
             
             <!-- Slow loading detection for LINE browser -->
@@ -351,6 +392,13 @@ if ($isLineBrowser) {
                             }
                         }
                     }, 1000);
+                    
+                    // Show timeout message after 90 seconds (1.5 minutes)
+                    setTimeout(function() {
+                        if (isLineBrowser() && redirectAttempted && (!opened || opened.closed || typeof opened.closed == 'undefined')) {
+                            showTimeoutMessage();
+                        }
+                    }, 90000); // 90 seconds = 1.5 minutes
                 </script>
                 <div id="fallback" style="display: none;">
                     <p class="info">กรุณากดปุ่มด้านล่างเพื่อเปิดใน Safari:</p>
@@ -401,6 +449,13 @@ if ($isLineBrowser) {
                             }
                         }
                     }, 1000);
+                    
+                    // Show timeout message after 90 seconds (1.5 minutes)
+                    setTimeout(function() {
+                        if (isLineBrowser()) {
+                            showTimeoutMessage();
+                        }
+                    }, 90000); // 90 seconds = 1.5 minutes
                 </script>
                 <a href="<?php echo $redirectUrl; ?>" class="btn" target="_blank">เปิดในเบราว์เซอร์</a>
             <?php endif; ?>
@@ -410,8 +465,45 @@ if ($isLineBrowser) {
                 function detectDevice() {
                     var ua = navigator.userAgent.toLowerCase();
                     if (ua.indexOf('android') !== -1) return 'android';
-                    if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+                    if (ua.indexOf('ipad') !== -1) return 'ipad';
+                    if (/iphone|ipod/.test(ua)) return 'iphone';
                     return 'other';
+                }
+                
+                function showTimeoutMessage() {
+                    var timeoutDiv = document.getElementById('timeoutMessage');
+                    var timeoutSteps = document.getElementById('timeoutSteps');
+                    var device = detectDevice();
+                    
+                    if (!timeoutDiv || !timeoutSteps) return;
+                    
+                    var steps = [];
+                    
+                    if (device === 'ipad') {
+                        steps.push('<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
+                        steps.push('<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>');
+                        steps.push('<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
+                        steps.push('<li>หรือ <strong>คัดลอกลิงก์ด้านล่าง</strong> แล้วเปิดใน Safari</li>');
+                    } else if (device === 'iphone') {
+                        steps.push('<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
+                        steps.push('<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>');
+                        steps.push('<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
+                    } else if (device === 'android') {
+                        steps.push('<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>');
+                        steps.push('<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>');
+                        steps.push('<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>');
+                        steps.push('<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>');
+                    } else {
+                        steps.push('<li>กดเมนู (⋮) หรือ Share (□↑) ที่มุมขวาบน</li>');
+                        steps.push('<li>เลือก "เปิดในเบราว์เซอร์" หรือ "Open in Browser"</li>');
+                        steps.push('<li>เลือกเบราว์เซอร์ที่ต้องการ</li>');
+                    }
+                    
+                    timeoutSteps.innerHTML = steps.join('');
+                    timeoutDiv.classList.add('show');
+                    
+                    // Scroll to timeout message
+                    timeoutDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 
                 function showHelpPopup() {
@@ -436,8 +528,24 @@ if ($isLineBrowser) {
                             '• บางครั้งเมนูอาจอยู่ที่มุมขวาล่าง<br>' +
                             '• ตรวจสอบว่า Chrome ติดตั้งอยู่บนเครื่องของคุณ' +
                             '</p>';
-                    } else if (device === 'ios') {
-                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iOS)</h3>' +
+                    } else if (device === 'ipad') {
+                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iPad)</h3>' +
+                            '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
+                            '<ol>' +
+                            '<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
+                            '<li>เลื่อนลงและเลือก <strong>"Safari"</strong> หรือ <strong>"เปิดในเบราว์เซอร์"</strong></li>' +
+                            '<li>เมื่อ Safari เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
+                            '<li>หรือ <strong>คัดลอกลิงก์</strong> แล้วเปิดใน Safari ด้วยตนเอง</li>' +
+                            '</ol>' +
+                            '<p style="margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 8px;">' +
+                            '<strong>💡 เคล็ดลับสำหรับ iPad:</strong><br>' +
+                            '• ถ้าไม่เห็นไอคอน Share ให้ลองเลื่อนหน้าจอ<br>' +
+                            '• บน iPad อาจต้องกดที่มุมขวาบนหรือขวาล่าง<br>' +
+                            '• ตรวจสอบว่า Safari เปิดใช้งานได้<br>' +
+                            '• บน iPad สามารถใช้ Safari ได้ทั้งในโหมด portrait และ landscape' +
+                            '</p>';
+                    } else if (device === 'iphone') {
+                        helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์ (iPhone)</h3>' +
                             '<p>ถ้าไม่สามารถเปิดอัตโนมัติได้ กรุณาทำตามขั้นตอนนี้:</p>' +
                             '<ol>' +
                             '<li><strong>กดไอคอน Share (□↑)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
@@ -450,7 +558,7 @@ if ($isLineBrowser) {
                             '• บางครั้งอาจต้องกดที่มุมขวาล่าง<br>' +
                             '• ตรวจสอบว่า Safari เปิดใช้งานได้' +
                             '</p>';
-                    } else {
+    } else {
                         helpText = '<h3>📱 วิธีเปิดในเบราว์เซอร์</h3>' +
                             '<p>กรุณาทำตามขั้นตอนนี้:</p>' +
                             '<ol>' +
@@ -482,25 +590,25 @@ if ($isLineBrowser) {
     </body>
     </html>
     <?php
-    exit();
+        exit();
 }
 
 // ถ้าเข้าจาก browser ปกติพร้อม token (presence-based validation only)
 if ($token && !empty(trim($token))) {
     // เก็บ token ใน session (presence-based only, no expiration check)
-    $_SESSION['token'] = $token;
+        $_SESSION['token'] = $token;
     $_SESSION['access_token'] = $token;
     
     // เก็บ token ใน cookie เพื่อเป็น backup (long expiry for persistence)
     setcookie('smtc_token', $token, time() + (86400 * 30), '/', '', true, true); // 30 days
     
     // Redirect ไปยังหน้าถัดไป
-    if (!isset($_SESSION["user"])) {
+        if (!isset($_SESSION["user"])) {
         header("Location: login.php?token=" . urlencode($token));
-    } else {
-        header("Location: user.php");
-    }
-    exit();
+        } else {
+            header("Location: user.php");
+        }
+        exit();
 }
 
 // ถ้าไม่มี token ใน URL แต่มีใน cookie (fallback - presence-based only)
@@ -515,7 +623,7 @@ if (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
     } else {
         header("Location: user.php");
     }
-    exit();
+        exit();
 }
 
 // ถ้าไม่มี token และไม่ใช่ LINE browser
