@@ -38,22 +38,20 @@ if ($isLineBrowser) {
         <style>
             body {
                 font-family: 'Noto Sans Thai', sans-serif;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
                 margin: 0;
                 padding: 20px;
                 background: #f5f5f5;
                 text-align: center;
+                min-height: 100vh;
             }
             .container {
                 background: white;
                 padding: 30px;
                 border-radius: 10px;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                max-width: 400px;
+                max-width: 500px;
+                margin: 20px auto;
+                width: 100%;
             }
             .btn {
                 display: inline-block;
@@ -101,11 +99,33 @@ if ($isLineBrowser) {
                 background: #ffe6e6;
                 border: 2px solid #f44336;
                 color: #c62828;
+                display: block !important;
+                position: relative;
+                z-index: 10;
+                margin-top: 30px;
+                margin-bottom: 30px;
             }
             #issueExplanation strong {
                 font-size: 20px;
                 display: block;
                 margin-bottom: 15px;
+                color: #c62828;
+            }
+            #issueExplanation.show {
+                display: block !important;
+                animation: slideDown 0.5s ease-out;
+            }
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                    max-height: 0;
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                    max-height: 2000px;
+                }
             }
             .status-update {
                 background: #e3f2fd;
@@ -283,6 +303,16 @@ if ($isLineBrowser) {
                 </div>
             </div>
             
+            <!-- Scroll indicator (shows when content is below) -->
+            <div id="scrollIndicator" style="display: none; text-align: center; margin: 20px 0; color: #666; font-size: 14px;">
+                <p>👇 เลื่อนลงเพื่อดูวิธีแก้ไข</p>
+                <div style="animation: bounce 2s infinite; font-size: 24px;">⬇️</div>
+            </div>
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(10px); }
+            }
+            
             <!-- Slow loading detection for LINE browser -->
             <div id="slowLoadWarning" class="slow-load-warning">
                 <strong>⚠️ หน้านี้ใช้เวลาโหลดนานเกินไป</strong>
@@ -367,21 +397,25 @@ if ($isLineBrowser) {
                     // ถ้า Intent ไม่ทำงาน ให้แสดงปุ่ม fallback และอธิบายปัญหา
                     setTimeout(function() {
                         if (isLineBrowser()) {
-                            updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง', 'warning');
+                            updateStatus('<strong>⚠️ ไม่สามารถเปิดอัตโนมัติได้</strong><br>กรุณาทำตามขั้นตอนด้านล่าง 👇', 'warning');
                             document.getElementById('fallback').style.display = 'block';
                             
                             showIssueExplanation(
+                                '<strong>เกิดอะไรขึ้น?</strong><br>' +
                                 'ระบบไม่สามารถเปิด Chrome อัตโนมัติได้ อาจเป็นเพราะ:<br>' +
                                 '• LINE ไม่รองรับการเปิดเบราว์เซอร์อัตโนมัติ<br>' +
                                 '• Chrome ยังไม่ได้ตั้งเป็นเบราว์เซอร์เริ่มต้น<br>' +
                                 '• การตั้งค่าความปลอดภัยบล็อกการเปิดอัตโนมัติ',
-                                '<strong>วิธีแก้ไข:</strong><ol>' +
+                                '<strong style="font-size: 18px; color: #c62828;">📋 วิธีแก้ไข (ทำตามขั้นตอนนี้):</strong><ol style="font-size: 16px; line-height: 2;">' +
                                 '<li><strong>กดจุดสามจุด (⋮)</strong> ที่มุมขวาบนของหน้าจอ LINE</li>' +
                                 '<li>เลือก <strong>"เปิดในเบราว์เซอร์"</strong> หรือ <strong>"Open in Browser"</strong></li>' +
                                 '<li>เลือก <strong>Chrome</strong> หรือ <strong>"เปิดในเบราว์เซอร์เริ่มต้น"</strong></li>' +
-                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้อนุญาตการเข้าถึงตำแหน่งเมื่อเบราว์เซอร์ถาม</li>' +
+                                '<li>เมื่อ Chrome เปิดขึ้นมา ให้<strong>อนุญาตการเข้าถึงตำแหน่ง</strong>เมื่อเบราว์เซอร์ถาม</li>' +
                                 '</ol>'
                             );
+                            
+                            // Check if scrolling is needed
+                            setTimeout(checkScrollNeeded, 200);
                         }
                     }, 2000);
                     
