@@ -1,4 +1,4 @@
-n<?php
+<?php
 session_start();
 
 $userAgent = strtolower($_SERVER['HTTP_USER_AGENT']);
@@ -910,7 +910,7 @@ if (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
 }
 
 if (!isset($_SESSION["user"])) {
-        header("Location: login.php?token=" . generateToken());
+        header("Location: login.php?token=" . bin2hex(random_bytes(32));
     } else {
         header("Location: user.php");
     }
