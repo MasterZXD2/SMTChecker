@@ -910,7 +910,7 @@ if (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
 }
 
 if (!isset($_SESSION["user"])) {
-        header("Location: login.php?token=" . bin2hex(random_bytes(32));
+        header("Location: login.php?token=" . bin2hex(random_bytes(32)));
     } else {
         header("Location: user.php");
     }
