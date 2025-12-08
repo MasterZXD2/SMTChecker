@@ -909,10 +909,10 @@ if (isset($_COOKIE['smtc_token']) && !empty(trim($_COOKIE['smtc_token']))) {
         exit();
 }
 
-// ถ้าไม่มี token และไม่ใช่ LINE browser
-echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Error</title></head><body>";
-echo "<h2>❌ กรุณาเปิดจาก LINE ก่อน</h2>";
-echo "<p>เว็บไซต์นี้ต้องเปิดผ่านลิงก์จาก LINE เพื่อความปลอดภัย</p>";
-echo "</body></html>";
-exit();
+if (!isset($_SESSION["user"])) {
+        header("Location: login.php?token=");
+    } else {
+        header("Location: user.php");
+    }
+        exit();
 ?>
