@@ -311,9 +311,84 @@
                     }
                 }));
             }
+            // Also render an in-page notification UI (fallback if page doesn't listen)
+            try {
+                ensureGeoUIStyles();
+                showGeoErrorPanel(text, error);
+            } catch (uiErr) {
+                // ignore UI errors
+            }
         } catch (e) {
             // fail silently - do not block errorCallback
         }
+    }
+
+    /* --- In-page Notification UI (self-contained) --- */
+    function ensureGeoUIStyles() {
+        if (document.getElementById('geo-ui-styles')) return;
+        const css = `
+        .geo-notify-panel{position:fixed;right:20px;bottom:20px;width:360px;max-width:calc(100% - 40px);background:#ffffff;border-radius:14px;box-shadow:0 8px 24px rgba(44,44,99,0.12);border:1px solid rgba(92,80,255,0.08);overflow:hidden;font-family:inherit;z-index:99999;animation:geoSlideUp .28s ease-out}
+        .geo-notify-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(90deg,#6f60ff, #5c50ff);color:#fff}
+        .geo-notify-title{font-weight:700;font-size:14px}
+        .geo-notify-close{background:transparent;border:none;color:rgba(255,255,255,0.9);font-size:16px;cursor:pointer}
+        .geo-notify-body{padding:12px 14px;max-height:180px;overflow:auto;color:#222;background:linear-gradient(180deg, rgba(245,245,255,0.8), #fff)}
+        .geo-notify-footer{padding:10px 12px;border-top:1px solid rgba(92,80,255,0.06);display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#666}
+        .geo-notify-code{background:#f3f2ff;color:#3a2cff;padding:6px 8px;border-radius:6px;font-weight:600}
+        .geo-notify-message p{white-space:pre-wrap;margin:0;font-size:13px;line-height:1.3}
+        @keyframes geoSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+        `;
+        const style = document.createElement('style');
+        style.id = 'geo-ui-styles';
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    }
+
+    function showGeoErrorPanel(text, error) {
+        const id = 'geo-error-panel';
+        let panel = document.getElementById(id);
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = id;
+            panel.className = 'geo-notify-panel';
+            panel.innerHTML = `
+                <div class="geo-notify-header">
+                    <div class="geo-notify-title">ตำแหน่ง (GPS) — ข้อผิดพลาด</div>
+                    <button class="geo-notify-close" aria-label="ปิด">✕</button>
+                </div>
+                <div class="geo-notify-body">
+                    <div class="geo-notify-message"></div>
+                </div>
+                <div class="geo-notify-footer">
+                    <div class="geo-notify-time"></div>
+                    <div class="geo-notify-code"></div>
+                </div>
+            `;
+            document.body.appendChild(panel);
+            // close handler
+            panel.querySelector('.geo-notify-close').addEventListener('click', function() {
+                panel.remove();
+            });
+        }
+
+        const msgEl = panel.querySelector('.geo-notify-message');
+        const codeEl = panel.querySelector('.geo-notify-code');
+        const timeEl = panel.querySelector('.geo-notify-time');
+
+        msgEl.innerHTML = '<p>' + escapeHtml(text) + '</p>';
+        codeEl.textContent = 'Code: ' + (error && error.code != null ? error.code : 'N/A');
+        const now = new Date();
+        timeEl.textContent = now.toLocaleString();
+
+        // If multiple errors arrive, ensure scroll resets to top and panel is visible
+        const body = panel.querySelector('.geo-notify-body');
+        body.scrollTop = 0;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>\"']/g, function(s) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]);
+        });
     }
 
     /**
