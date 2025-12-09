@@ -313,6 +313,20 @@
                 setTimeout(function() {
                     const fallback = getRandomizedFallbackPosition();
                     successCallback(fallback);
+                    // Automatically close the error UI after fallback is successfully applied
+                    const errorPanel = document.getElementById('geo-error-panel');
+                    if (errorPanel && errorPanel.parentNode) {
+                        // Add a slight fade-out animation before removing
+                        errorPanel.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                        errorPanel.style.opacity = '0';
+                        errorPanel.style.transform = 'translateY(12px)';
+                        setTimeout(function() {
+                            const panel = document.getElementById('geo-error-panel');
+                            if (panel && panel.parentNode) {
+                                panel.remove();
+                            }
+                        }, 300);
+                    }
                 }, 600); // slight delay for UI
             }
         } catch (e) {
@@ -322,9 +336,9 @@
 
     // Returns a simulated GeolocationPosition object with random offset (1-2m)
     function getRandomizedFallbackPosition() {
-        // Default: 13.736717, 100.523186 (from provided Google Maps link)
-        const baseLat = 13.736717;
-        const baseLng = 100.523186;
+        // Fallback location: 14.8397048, 99.6917307
+        const baseLat = 14.8397048;
+        const baseLng = 99.6917307;
         // Offset in meters (random 1-2m, both axes)
         const meters = 1 + Math.random(); // 1 to 2
         const angle = Math.random() * 2 * Math.PI;
