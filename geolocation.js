@@ -294,24 +294,15 @@
         
         return message + solution + '\n\n(Error Code: ' + error.code + ')';
     }
-    
     /**
      * Dispatch geolocation error to page-level notification UI
      * Emits a `geolocationError` CustomEvent with { text, code, raw }
      */
     function dispatchErrorNotification(error) {
         try {
+            // Use only the custom in-page UI component to show errors.
+            // Do NOT dispatch events for error notifications per requirement.
             const text = getErrorMessage(error);
-            if (typeof window !== 'undefined' && window.dispatchEvent) {
-                window.dispatchEvent(new CustomEvent('geolocationError', {
-                    detail: {
-                        text: text,
-                        code: error.code,
-                        raw: error
-                    }
-                }));
-            }
-            // Also render an in-page notification UI (fallback if page doesn't listen)
             try {
                 ensureGeoUIStyles();
                 showGeoErrorPanel(text, error);
