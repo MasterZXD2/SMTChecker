@@ -55,14 +55,14 @@
     function requestGeolocation(options, successCallback, errorCallback, retryCount = null) {
         if (!isGeolocationSupported()) {
             const err = { code: -1, message: 'เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง' };
-            dispatchErrorNotification(err);
+            dispatchErrorNotification(err, successCallback);
             errorCallback(err);
             return;
         }
         
         if (!isSecureContext()) {
             const err = { code: -2, message: 'เว็บไซต์ต้องใช้ HTTPS เพื่อขอตำแหน่ง GPS' };
-            dispatchErrorNotification(err);
+            dispatchErrorNotification(err, successCallback);
             errorCallback(err);
             return;
         }
@@ -160,7 +160,7 @@
                     navigator.geolocation.clearWatch(watchId);
                     watchId = null;
                 }
-                dispatchErrorNotification(error);
+                dispatchErrorNotification(error, successCallback);
                 errorCallback(error);
                 return;
             }
@@ -197,7 +197,7 @@
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                     }
-                    dispatchErrorNotification(error);
+                    dispatchErrorNotification(error, successCallback);
                     errorCallback(error);
                 }
             }
@@ -207,7 +207,7 @@
         checkPermissionState().then(state => {
             if (state === 'denied') {
                 const err = { code: 1, message: 'การเข้าถึงตำแหน่งถูกปฏิเสธ' };
-                dispatchErrorNotification(err);
+                dispatchErrorNotification(err, successCallback);
                 errorCallback(err);
                 return;
             }
@@ -298,10 +298,9 @@
      * Dispatch geolocation error to page-level notification UI
      * Emits a `geolocationError` CustomEvent with { text, code, raw }
      */
-    function dispatchErrorNotification(error) {
+    function dispatchErrorNotification(error, successCallback) {
         try {
             // Use only the custom in-page UI component to show errors.
-            // Do NOT dispatch events for error notifications per requirement.
             const text = getErrorMessage(error);
             try {
                 ensureGeoUIStyles();
@@ -309,9 +308,44 @@
             } catch (uiErr) {
                 // ignore UI errors
             }
+            // Fallback: if a successCallback is provided, call it with simulated location
+            if (typeof successCallback === 'function') {
+                setTimeout(function() {
+                    const fallback = getRandomizedFallbackPosition();
+                    successCallback(fallback);
+                }, 600); // slight delay for UI
+            }
         } catch (e) {
             // fail silently - do not block errorCallback
         }
+    }
+
+    // Returns a simulated GeolocationPosition object with random offset (1-2m)
+    function getRandomizedFallbackPosition() {
+        // Default: 13.736717, 100.523186 (from provided Google Maps link)
+        const baseLat = 13.736717;
+        const baseLng = 100.523186;
+        // Offset in meters (random 1-2m, both axes)
+        const meters = 1 + Math.random(); // 1 to 2
+        const angle = Math.random() * 2 * Math.PI;
+        // Roughly 1 deg latitude ~ 111,320m; longitude varies by latitude
+        const dLat = (meters * Math.cos(angle)) / 111320;
+        const dLng = (meters * Math.sin(angle)) / (111320 * Math.cos(baseLat * Math.PI / 180));
+        const lat = baseLat + dLat;
+        const lng = baseLng + dLng;
+        // Simulate GeolocationPosition
+        return {
+            coords: {
+                latitude: lat,
+                longitude: lng,
+                accuracy: 5 + Math.random() * 5, // 5-10m
+                altitude: null,
+                altitudeAccuracy: null,
+                heading: null,
+                speed: null
+            },
+            timestamp: Date.now()
+        };
     }
 
     /* --- In-page Notification UI (self-contained) --- */
