@@ -54,18 +54,16 @@
      */
     function requestGeolocation(options, successCallback, errorCallback, retryCount = null) {
         if (!isGeolocationSupported()) {
-            errorCallback({
-                code: -1,
-                message: 'เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง'
-            });
+            const err = { code: -1, message: 'เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง' };
+            dispatchErrorNotification(err);
+            errorCallback(err);
             return;
         }
         
         if (!isSecureContext()) {
-            errorCallback({
-                code: -2,
-                message: 'เว็บไซต์ต้องใช้ HTTPS เพื่อขอตำแหน่ง GPS'
-            });
+            const err = { code: -2, message: 'เว็บไซต์ต้องใช้ HTTPS เพื่อขอตำแหน่ง GPS' };
+            dispatchErrorNotification(err);
+            errorCallback(err);
             return;
         }
         
@@ -162,6 +160,7 @@
                     navigator.geolocation.clearWatch(watchId);
                     watchId = null;
                 }
+                dispatchErrorNotification(error);
                 errorCallback(error);
                 return;
             }
@@ -198,6 +197,7 @@
                         navigator.geolocation.clearWatch(watchId);
                         watchId = null;
                     }
+                    dispatchErrorNotification(error);
                     errorCallback(error);
                 }
             }
@@ -206,10 +206,9 @@
         // Check permission state first (if available)
         checkPermissionState().then(state => {
             if (state === 'denied') {
-                errorCallback({
-                    code: 1, // PERMISSION_DENIED
-                    message: 'การเข้าถึงตำแหน่งถูกปฏิเสธ'
-                });
+                const err = { code: 1, message: 'การเข้าถึงตำแหน่งถูกปฏิเสธ' };
+                dispatchErrorNotification(err);
+                errorCallback(err);
                 return;
             }
             
@@ -296,6 +295,27 @@
         return message + solution + '\n\n(Error Code: ' + error.code + ')';
     }
     
+    /**
+     * Dispatch geolocation error to page-level notification UI
+     * Emits a `geolocationError` CustomEvent with { text, code, raw }
+     */
+    function dispatchErrorNotification(error) {
+        try {
+            const text = getErrorMessage(error);
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('geolocationError', {
+                    detail: {
+                        text: text,
+                        code: error.code,
+                        raw: error
+                    }
+                }));
+            }
+        } catch (e) {
+            // fail silently - do not block errorCallback
+        }
+    }
+
     /**
      * Reverse geocoding - Convert coordinates to address
      */
